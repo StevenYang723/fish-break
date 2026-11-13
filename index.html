@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#08172e">
   <meta name="description" content="再弹一条：一分钟的摸鱼时间。弹射小鱼、触发机关，用三选一升级组合属于你的肉鸽玩法。手机电脑都能玩。">
-  <title>再弹一条 — 摸鱼也要有回响</title>
+  <title>再弹一条 · 深海低语</title>
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./style.css">
-  <link rel="stylesheet" href="./arcade.css">
+  <link rel="stylesheet" href="./style.css?v=2.0">
+  <link rel="stylesheet" href="./arcade.css?v=2.0"><link rel="stylesheet" href="./depth.css?v=2.0">
 </head>
 <body>
   <div class="app">
@@ -17,24 +17,24 @@
       <nav aria-label="游戏设置"><span class="local-tag"><i></i> 随时暂停，随心摸鱼</span><button class="icon-btn" id="sound" aria-label="开启音效" title="音效">♪<span class="mute-dot"></span></button><button class="icon-btn" id="help" aria-label="玩法说明" title="玩法说明">?</button></nav>
     </header>
     <main>
-      <section class="intro"><div><p class="eyebrow"><span class="season-pill">街机 · 肉鸽</span> NEON OCEAN / VOL. 01</p><h1>再弹<span>一条！</span><span class="title-spark">✦</span></h1><p class="intro-copy">潜入霓虹深海，弹出你的神级连锁。</p></div><div class="best"><span>♛ 个人最高纪录</span><strong id="best">0</strong><small>HIGH SCORE <span>✦</span></small></div></section>
+      <section class="intro"><div><p class="eyebrow"><span class="season-pill">深潜 · 克苏鲁</span> THE ABYSS / VOL. 02</p><h1>再弹<span>一条！</span><span class="title-spark">✦</span></h1><p class="intro-copy">越向深处，越不像鱼。</p></div><div class="best"><span>♛ 个人最高纪录</span><strong id="best">0</strong><small>HIGH SCORE <span>✦</span></small></div></section>
       <div class="game-layout">
         <section class="game-panel" aria-label="弹珠游戏">
           <div class="scorebar"><div class="level-badge" id="levelBadge">01</div><div class="score-block"><div class="score-heading"><span id="levelName">浅水试弹</span><span id="targetLabel">目标 260</span></div><div class="progress-track"><div id="progress"></div></div><div class="score-numbers"><strong id="score">0</strong><span> / <span id="target">260</span> 分</span></div></div><div class="ammo"><span>剩余小鱼</span><div id="ammo" aria-label="剩余 3 条小鱼"></div></div><button class="icon-btn pause-btn" id="pause" aria-label="暂停游戏">Ⅱ</button></div>
-          <div class="board-wrap" id="boardWrap"><canvas id="board" width="420" height="544" tabindex="0" aria-label="弹珠场地，拖动瞄准松手发射，也可用左右方向键瞄准，空格发射"></canvas><div class="board-tag"><span class="pulse"></span><span id="boardStatus">你的摸鱼时间</span></div><div class="combo-hud" id="comboHud"><strong id="comboNumber">0</strong><span>COMBO</span><small id="comboWord">NICE SHOT</small></div><div class="shot-toast" id="shotToast" aria-live="polite"></div><div class="aim-hint" id="aimHint">拖动瞄准 <span>↘</span> 松手发射</div></div>
-          <div class="controlbar"><div><span class="status-dot"></span><span id="statusText">准备好，弹出第一条</span><small id="shotPreview">瞄准气泡，落入倍率鱼缸</small></div><button class="shoot-btn" id="shoot">发射小鱼 <span>↗</span></button></div>
+          <div class="depth-strip"><span>↓ <strong id="depthValue">30 m</strong> <span id="depthName">日光浅滩</span></span><span id="routeName">珍珠矿脉</span></div><div class="board-wrap" id="boardWrap"><canvas id="board" width="420" height="544" tabindex="0" aria-label="弹珠场地，拖动瞄准松手发射，也可用左右方向键瞄准，空格发射"></canvas><div class="board-tag"><span class="pulse"></span><span id="boardStatus">你的摸鱼时间</span></div><div class="combo-hud" id="comboHud"><strong id="comboNumber">0</strong><span>COMBO</span><small id="comboWord">NICE SHOT</small></div><div class="shot-toast" id="shotToast" aria-live="polite"></div><div class="aim-hint" id="aimHint">拖动瞄准 <span>↘</span> 松手发射</div></div>
+          <div class="reward-strip"><span>◈ 得分点 <b id="mapCount">50 / 50 颗</b></span><span id="mapValue">基础 10 分 / 颗</span></div><div class="controlbar"><div><span class="status-dot"></span><span id="statusText">准备好，弹出第一条</span><small id="shotPreview">瞄准气泡，落入倍率鱼缸</small></div><button class="shoot-btn" id="shoot">发射小鱼 <span>↗</span></button></div>
         </section>
         <aside class="sidebar">
-          <section class="journey card"><div class="section-label"><h2>这趟摸鱼之旅</h2><span id="journeyCount">1 / 5</span></div><div id="route" class="route"></div><div class="run-total"><span>本轮累计</span><strong id="total">0 <small>分</small></strong></div></section>
-          <section class="build card"><div class="section-label"><h2>我的小鱼流派</h2><span class="tiny-pill" id="buildCount">0 个升级</span></div><div id="upgrades"><div class="empty-build"><span>✧</span><p>每次过关，三选一升级</p><small>下一条鱼，会有点不一样。</small></div></div></section>
+          <section class="journey card"><div class="section-label"><h2>向深海，下潜</h2><span id="journeyCount">1 / 10</span></div><div id="route" class="route"></div><div class="run-total"><span>本轮累计</span><strong id="total">0 <small>分</small></strong></div></section>
+          <section class="cult-card card"><div class="section-label"><h2>◉ 深海侵蚀</h2><span><b id="cultValue">0</b> / 12+</span></div><strong id="cultName">理智清明</strong><div class="cult-track"><div id="cultMeter"></div></div><p id="cultCopy"></p></section><section class="build card"><div class="section-label"><h2>我的小鱼流派</h2><span class="tiny-pill" id="buildCount">0 个升级</span></div><div id="upgrades"><div class="empty-build"><span>✧</span><p>每次过关，三选一升级</p><small>下一条鱼，会有点不一样。</small></div></div></section>
           <section class="tip-card"><span class="tip-icon">✳</span><div><h3 id="tipTitle">一点点小策略</h3><p id="tipText">底部金色鱼缸有 3 倍奖励。好角度，比用力更重要。</p></div></section>
           <button class="restart-link" id="restart">↺ 开始新的一轮</button>
         </aside>
       </div>
-      <footer><span>专注摸鱼，适时冒泡。</span><span>本机自动存档 <i>·</i> 一轮约 3–5 分钟</span></footer>
+      <footer><span>专注摸鱼，适时冒泡。</span><span>本机自动存档 <i>·</i> 10 层海域 · 24 种遗物</span></footer>
     </main>
   </div>
   <div class="modal-backdrop" id="modal" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" id="modalCard"></section></div>
-  <script type="module" src="./game.js"></script>
+  <script type="module" src="./game.js?v=2.0"></script>
 </body>
 </html>
