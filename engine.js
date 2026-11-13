@@ -30,20 +30,20 @@ export const PERKS=[
  {id:'magnet',icon:'∪',name:'金币磁鳍',tag:'幸运',desc:'进入底部区域后，向中央鱼缸吸引。',max:2},
  {id:'pierce',icon:'➶',name:'穿浪鱼雷',tag:'穿透',desc:'每条鱼前 3 次碰撞穿透气泡，并各加 1 倍基础分；叠加增加次数。',max:2},
  {id:'wall',icon:'⟡',name:'回弹红包',tag:'机关',desc:'每条鱼前 5 次撞墙，各获得 2 倍基础分。',max:2},
- {id:'tentacle',icon:'ψ',name:'触须共生',tag:'克苏鲁',desc:'每 0.8 秒伸出触须，吞食附近 70 范围内的气泡；叠加扩大范围。',max:3,cult:1},
- {id:'gaze',icon:'◉',name:'深渊之眼',tag:'克苏鲁',desc:'每撞破 5 个气泡，凝视击碎远处 3 个；叠加增加目标。',max:2,cult:1},
- {id:'brood',icon:'♆',name:'不可名状之卵',tag:'克苏鲁',desc:'主鱼每撞破 6 个气泡，孵化 2 条幼体；叠加多 1 条，每发最多 7 条鱼。',max:2,cult:2},
- {id:'sacrifice',icon:'⛧',name:'血潮契约',tag:'克苏鲁',desc:'每关少 1 次发射（至少 2 次），所有结算分增加 65%。',max:2,cult:2},
- {id:'blackTide',icon:'≈',name:'黑潮回响',tag:'克苏鲁',desc:'每发结束后，25% 已破气泡以幽灵形态重生一次；叠加提高比例。',max:2,cult:1},
- {id:'maw',icon:'⏣',name:'虚空吞口',tag:'克苏鲁',desc:'中央鱼缸升至 ×5，两侧降为 ×0.5；可搭配保底好运。',max:1,cult:2},
- {id:'stars',icon:'✵',name:'群星归位',tag:'克苏鲁',desc:'每撞破 8 个气泡，仪式冲击击碎最近 6 个；叠加增加目标。',max:2,cult:2},
- {id:'dream',icon:'☽',name:'梦魇鳃',tag:'克苏鲁',desc:'每层生成梦境漩涡；主鱼首次进入漩涡或传送门，召唤 2 条幼体。',max:1,cult:1},
- {id:'rebirth',icon:'☥',name:'深潜者再生',tag:'克苏鲁',desc:'主鱼首次落入鱼缸前弹回场内，保留本次得分。',max:1,cult:1}
+ {id:'tentacle',icon:'ψ',name:'触须共生',tag:'克苏鲁',desc:'每 0.8 秒吞食附近气泡；每级扩大触须范围。',cost:l=>'直接撞击气泡的得分 −'+(15*l)+'%；触须、连锁等间接得分不受影响。',max:3,cult:1},
+ {id:'gaze',icon:'◉',name:'深渊之眼',tag:'克苏鲁',desc:'每撞破 5 个气泡，凝视击碎远处 3 个；叠加增加目标。',cost:l=>'中央高倍率鱼缸缩窄 '+(18*l)+' 像素；大号金鱼缸可补偿宽度。',max:2,cult:1},
+ {id:'brood',icon:'♆',name:'不可名状之卵',tag:'克苏鲁',desc:'主鱼每撞破 6 个气泡，孵化 2 条幼体；叠加多 1 条，每发最多 7 条鱼。',cost:()=> '每次成功孵化，消耗主鱼当时已得气泡分的 40%。',max:2,cult:2},
+ {id:'sacrifice',icon:'⛧',name:'血潮契约',tag:'克苏鲁',desc:'所有鱼的结算分每级增加 65%。',cost:l=>'每关发射次数 −'+l+'，最低仅剩 1 发；额外小鱼可补偿次数。',max:2,cult:2},
+ {id:'blackTide',icon:'≈',name:'黑潮回响',tag:'克苏鲁',desc:'每发结束后，25% 已破气泡重生一次；叠加提高比例。',cost:l=>'未重生气泡价值 −'+(15*l)+'%；幽灵气泡仅有原值的 75%。',max:2,cult:1},
+ {id:'maw',icon:'⏣',name:'虚空吞口',tag:'克苏鲁',desc:'中央鱼缸结算升至 ×5。',cost:()=> '中央缩窄 28 像素，最外侧鱼缸降至 ×0.5；保底好运只补偿侧缸倍率。',max:1,cult:2},
+ {id:'stars',icon:'✵',name:'群星归位',tag:'克苏鲁',desc:'每撞破 8 个气泡，仪式击碎 6 个；叠加增加目标。',cost:l=>'每次先永久献祭最近 '+(2+l)+' 颗气泡：不计分、不触发效果、不能再生。',max:2,cult:2},
+ {id:'dream',icon:'☽',name:'梦魇鳃',tag:'克苏鲁',desc:'每层生成梦境漩涡；主鱼首次进入漩涡或传送门，召唤 2 条幼体。',cost:()=> '成功召唤时，清空主鱼当前气泡分；已结算的关卡分数保留。',max:1,cult:1},
+ {id:'rebirth',icon:'☥',name:'深潜者再生',tag:'克苏鲁',desc:'主鱼可在落底时再弹回一次；回音航线的免费返弹优先。',cost:()=> '技能返弹时，损失这条主鱼当时已得气泡分的 50%。',max:1,cult:1}
 ];
 export function rng(seed){let s=seed>>>0;return()=>{s+=0x6D2B79F5;let t=Math.imul(s^s>>>15,1|s);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296;};}
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export class FishEngine{
- constructor(seed=Date.now(),{skipDraft=false}={}){this.version=2;this.seed=seed;this.stage=1;this.total=0;this.perks={};this.bestCombo=0;this.rerolls=3;this.draftRoll=0;this.routeId='treasure';this.events=[];this.setup();if(!skipDraft)this.state='draft';}
+ constructor(seed=Date.now(),{skipDraft=false}={}){this.version=2;this.balanceVersion=1;this.seed=seed;this.stage=1;this.total=0;this.perks={};this.bestCombo=0;this.rerolls=3;this.draftRoll=0;this.routeId='treasure';this.events=[];this.setup();if(!skipDraft)this.state='draft';}
  get biomeIndex(){return Math.min(4,Math.floor((this.stage-1)/2));}
  get biome(){return BIOMES[this.biomeIndex];}
  get depth(){return this.stage>10?8500+(this.stage-10)*1200:this.biome.depth+(this.stage-1)%2*[120,300,700,1200,2500][this.biomeIndex];}
@@ -53,8 +53,8 @@ export class FishEngine{
  get route(){return ROUTES.find(r=>r.id===this.routeId)||ROUTES[1];}
  setup(){
   const random=rng(this.seed+this.stage*731+ROUTES.findIndex(r=>r.id===this.routeId)*229),tier=this.biomeIndex,extraDepth=Math.max(0,this.stage-10);
-  this.baseValue=10+tier*6+extraDepth*3;this.score=0;this.maxShots=Math.max(2,3+(this.perks.extra||0)-(this.perks.sacrifice||0));this.shots=this.maxShots;
-  this.fish=[];this.time=0;this.state='ready';this.shotPoints=0;this.lastShot=0;this.events=[];this.nextFishId=0;this.draftRoll=0;
+  this.baseValue=10+tier*6+extraDepth*3;this.score=0;this.maxShots=Math.max(1,3+(this.perks.extra||0)-(this.perks.sacrifice||0));this.shots=this.maxShots;
+  this.fish=[];this.time=0;this.state='ready';this.shotPoints=0;this.shotCost=0;this.shotOfferings=0;this.lastShot=0;this.events=[];this.nextFishId=0;this.draftRoll=0;
   this.pegs=[];this.bumpers=[];this.portals=[];this.rotors=[];this.currents=[];this.vents=[];this.wells=[];this.altars=[];
   this.layout=Math.floor(random()*4);this.flowSign=random()<.5?-1:1;const mirror=random()<.5?-1:1;
   if(this.stage>=2)this.bumpers=[{x:mirror===1?102:318,y:265,r:16},{x:mirror===1?312:108,y:369,r:17}];
@@ -77,25 +77,27 @@ export class FishEngine{
   for(let i=0;this.pegs.length<desired&&i<3500;i++)add(25+random()*370,119+random()*333);
   this.mapBudget=this.pegs.reduce((s,p)=>s+this.pegValue(p,false),0);this.target=Math.round(this.mapBudget*(.42+Math.min(9,this.stage-1)*.14)/10)*10;this.mapCount=this.pegs.length;
  }
- pegValue(p,upgraded=true){const base=this.baseValue;let value=base*(p.kind==='pearl'?4:p.kind==='gold'?2.5:p.kind==='bomb'?1.5:1);if(upgraded){if(p.kind==='normal')value+=base*.4*(this.perks.rich||0);if((p.kind==='gold'||p.kind==='pearl')&&this.perks.gold)value*=2;}if(this.routeId==='current')value*=1.25;if(p.spectral)value*=.75;return Math.round(value);}
- bins(){const mid=92+(this.perks.wide||0)*26,other=(W-mid)/4;let x=0;return[1,2,3,2,1].map((m,i)=>{if(this.perks.maw)m=i===2?5:i%2?2:.5;if(this.perks.safe&&(i===0||i===4))m=Math.max(2,m);const w=i===2?mid:other,b={x,w,m};x+=w;return b;});}
- makeFish(x,y,vx,vy,child=false){return{id:++this.nextFishId,x,y,vx,vy,r:child?6:8,points:0,hits:0,child,split:false,wallHits:0,reborn:false,dreamed:false,portalCooldown:0,bumperCooldown:0,ventCooldown:0,altarCooldown:0,tentacleCooldown:.3,pierces:3*(this.perks.pierce||0),trail:[]};}
- shoot(angle=0){if(this.state!=='ready'||this.shots<1||!Number.isFinite(angle))return false;angle=clamp(angle,-1.05,1.05);this.shots--;this.fish=[this.makeFish(210,52,Math.sin(angle)*360,Math.cos(angle)*360)];this.spawned=1;if(this.perks.volley)this.spawnBrood(this.fish[0],2);this.shotPoints=0;this.shotTime=0;this.isLast=this.shots===0;this.state='flying';this.events.push({type:'shoot'});return true;}
- spawnBrood(f,n){for(let i=0;i<n&&this.spawned<7;i++){const a=(i%2?1:-1)*(.55+.18*Math.floor(i/2));this.fish.push(this.makeFish(clamp(f.x+(i%2?9:-9),10,410),f.y,Math.sin(a)*220,100+Math.abs(f.vy)*.4,true));this.spawned++;}this.events.push({type:'brood',x:f.x,y:f.y});}
+ pegValue(p,upgraded=true){const base=this.baseValue;let value=base*(p.kind==='pearl'?4:p.kind==='gold'?2.5:p.kind==='bomb'?1.5:1);if(upgraded){if(p.kind==='normal')value+=base*.4*(this.perks.rich||0);if((p.kind==='gold'||p.kind==='pearl')&&this.perks.gold)value*=2;if(!p.spectral)value*=1-.15*(this.perks.blackTide||0);}if(this.routeId==='current')value*=1.25;if(p.spectral)value*=.75;return Math.round(value);}
+ bins(){const mid=Math.max(24,92+(this.perks.wide||0)*26-(this.perks.gaze||0)*18-(this.perks.maw?28:0)),other=(W-mid)/4;let x=0;return[1,2,3,2,1].map((m,i)=>{if(this.perks.maw)m=i===2?5:i%2?2:.5;if(this.perks.safe&&(i===0||i===4))m=Math.max(2,m);const w=i===2?mid:other,b={x,w,m};x+=w;return b;});}
+ makeFish(x,y,vx,vy,child=false){return{id:++this.nextFishId,x,y,vx,vy,r:child?6:8,points:0,hits:0,child,split:false,wallHits:0,reborn:false,echoed:false,dreamed:false,portalCooldown:0,bumperCooldown:0,ventCooldown:0,altarCooldown:0,tentacleCooldown:.3,pierces:3*(this.perks.pierce||0),trail:[]};}
+ shoot(angle=0){if(this.state!=='ready'||this.shots<1||!Number.isFinite(angle))return false;angle=clamp(angle,-1.05,1.05);this.shots--;this.fish=[this.makeFish(210,52,Math.sin(angle)*360,Math.cos(angle)*360)];this.spawned=1;if(this.perks.volley)this.spawnBrood(this.fish[0],2);this.shotPoints=0;this.shotCost=0;this.shotOfferings=0;this.shotTime=0;this.isLast=this.shots===0;this.state='flying';this.events.push({type:'shoot'});return true;}
+ spawnBrood(f,n){const before=this.spawned;for(let i=0;i<n&&this.spawned<7;i++){const a=(i%2?1:-1)*(.55+.18*Math.floor(i/2));this.fish.push(this.makeFish(clamp(f.x+(i%2?9:-9),10,410),f.y,Math.sin(a)*220,100+Math.abs(f.vy)*.4,true));this.spawned++;}const count=this.spawned-before;if(count)this.events.push({type:'brood',x:f.x,y:f.y});return count;}
+ payCurse(f,rate,label){const lost=Math.floor(f.points*rate);f.points-=lost;this.shotCost=(this.shotCost||0)+lost;if(lost)this.events.push({type:'curse',x:f.x,y:f.y-15,text:label+' −'+lost});return lost;}
+ starRitual(f){const offerings=this.nearby(f,2+this.perks.stars);for(const p of offerings){p.alive=false;p.revived=true;p.consumed=true;this.events.push({type:'offering',x:p.x,y:p.y});}this.shotOfferings=(this.shotOfferings||0)+offerings.length;if(offerings.length)this.events.push({type:'curse',x:f.x,y:f.y-18,text:'献祭 '+offerings.length+' 颗 · 无得分'});this.strike(f,4+2*this.perks.stars,'gaze');this.events.push({type:'ritual',x:f.x,y:f.y});}
  nearby(f,n,r=Infinity){return this.pegs.filter(p=>p.alive&&Math.hypot(p.x-f.x,p.y-f.y)<r).sort((a,b)=>Math.hypot(a.x-f.x,a.y-f.y)-Math.hypot(b.x-f.x,b.y-f.y)).slice(0,n);}
  strike(f,n,type,r=Infinity){for(const p of this.nearby(f,n,r)){this.events.push({type,x:f.x,y:f.y,tx:p.x,ty:p.y});this.pop(p,f,true);}}
- pop(p,f,indirect=false){if(!p.alive)return;p.alive=false;const value=this.pegValue(p);f.points+=value;if(!indirect){f.hits++;this.bestCombo=Math.max(this.bestCombo,f.hits);}this.events.push({type:'pop',x:p.x,y:p.y,value,gold:p.gold,kind:p.kind,hits:indirect?0:f.hits});
+ pop(p,f,indirect=false){if(!p.alive)return;p.alive=false;const value=Math.round(this.pegValue(p)*(indirect?1:1-.15*(this.perks.tentacle||0)));f.points+=value;if(!indirect){f.hits++;this.bestCombo=Math.max(this.bestCombo,f.hits);}this.events.push({type:'pop',x:p.x,y:p.y,value,gold:p.gold,kind:p.kind,hits:indirect?0:f.hits});
   if(p.kind==='bomb'){this.events.push({type:'nova',x:p.x,y:p.y});for(const q of this.nearby(p,4,53)){q.alive=false;const val=this.pegValue(q);f.points+=val;this.events.push({type:'pop',x:q.x,y:q.y,value:val,kind:q.kind,gold:q.gold,hits:0});}}
   if(indirect)return;
   if(f.hits%3===0){if(this.perks.combo){const bonus=this.baseValue*2*this.perks.combo;f.points+=bonus;this.events.push({type:'text',x:f.x,y:f.y-22,text:'连击 +'+bonus});}if(this.perks.chain)this.strike(f,2,'lightning');}
   if(this.perks.blast&&f.hits%4===0){this.strike(f,4*this.perks.blast,'nova',58);this.events.push({type:'nova',x:f.x,y:f.y});}
   if(this.perks.gaze&&f.hits%5===0)this.strike(f,2+this.perks.gaze,'gaze');
-  if(this.perks.brood&&!f.child&&f.hits%6===0)this.spawnBrood(f,1+this.perks.brood);
-  if(this.perks.stars&&f.hits%8===0){this.strike(f,4+2*this.perks.stars,'gaze');this.events.push({type:'ritual',x:f.x,y:f.y});}
+  if(this.perks.brood&&!f.child&&f.hits%6===0&&this.spawnBrood(f,1+this.perks.brood))this.payCurse(f,.4,'孵化供养');
+  if(this.perks.stars&&f.hits%8===0)this.starRitual(f);
  }
  bounce(f,x,y,r,speed=0){const dx=f.x-x,dy=f.y-y,d=Math.hypot(dx,dy);if(d>=r+f.r)return false;const nx=d>.0001?dx/d:0,ny=d>.0001?dy/d:-1;f.x=x+nx*(r+f.r+.4);f.y=y+ny*(r+f.r+.4);const dot=f.vx*nx+f.vy*ny;if(dot<0){f.vx-=1.82*dot*nx;f.vy-=1.82*dot*ny;}f.vx+=nx*speed;f.vy+=ny*speed;return true;}
  machineBonus(f,mult=0){const bonus=this.baseValue*(mult+2*(this.perks.spring||0));f.points+=bonus;return bonus;}
- dream(f){if(this.perks.dream&&!f.child&&!f.dreamed){f.dreamed=true;this.spawnBrood(f,2);}}
+ dream(f){if(this.perks.dream&&!f.child&&!f.dreamed){f.dreamed=true;if(this.spawnBrood(f,2))this.payCurse(f,1,'梦境遗忘');}}
  step(dt){if(this.state!=='flying'||!Number.isFinite(dt)||dt<=0)return;dt=Math.min(dt,.1);const n=Math.ceil(dt/(1/120));for(let i=0;i<n;i++)this.tick(dt/n);}
  tick(dt){if(this.state!=='flying')return;this.time+=dt;this.shotTime+=dt;const dead=new Set(),draining=this.shotTime>13;
   for(const f of [...this.fish]){
@@ -119,7 +121,7 @@ export class FishEngine{
    }
    const speed=Math.hypot(f.vx,f.vy);if(speed>650){f.vx*=650/speed;f.vy*=650/speed;}
    if(draining)f.vy=Math.max(250,f.vy);
-   if(f.y>=503&&!f.child&&!f.reborn&&!draining&&(this.perks.rebirth||this.routeId==='echo')){f.reborn=true;f.y=476;f.vy=-440;f.vx=(210-f.x)*1.1;this.events.push({type:'rebirth',x:f.x,y:490});continue;}
+   if(f.y>=503&&!f.child&&!draining){const echo=this.routeId==='echo'&&!f.echoed,rebirth=this.perks.rebirth&&!f.reborn;if(echo||rebirth){if(echo)f.echoed=true;else{f.reborn=true;this.payCurse(f,.5,'再生血税');}f.y=476;f.vy=-440;f.vx=(210-f.x)*1.1;this.events.push({type:'rebirth',x:f.x,y:490});continue;}}
    if(f.y>=503||this.shotTime>17){const bin=this.bins().find(b=>f.x>=b.x&&f.x<=b.x+b.w)||this.bins()[2],multiplier=(1+.65*(this.perks.sacrifice||0))*(this.isLast&&this.perks.last?1.5:1),points=Math.round(Math.max(this.baseValue,f.points)*bin.m*multiplier);this.shotPoints+=points;this.events.push({type:'land',x:f.x,y:498,value:points,m:bin.m});dead.add(f.id);}
   }
   this.fish=this.fish.filter(f=>!dead.has(f.id));
@@ -136,6 +138,8 @@ export class FishEngine{
   const e=new FishEngine(data.seed,{skipDraft:true});
   if(data.version!==2){e.stage=Math.min(10,data.stage);e.total=Number.isFinite(data.total)?data.total:0;e.perks=Object.fromEntries(PERKS.filter(p=>data.perks?.[p.id]).map(p=>[p.id,clamp(data.perks[p.id],0,p.max)]));e.bestCombo=data.bestCombo||0;e.setup();e.migrated=true;return e;}
   if(!Number.isFinite(data.total)||!Number.isFinite(data.score)||!Number.isFinite(data.shots)||!data.perks||['vents','wells','altars','currents'].some(k=>!Array.isArray(data[k])))return null;
-  Object.assign(e,data);e.events=[];return e;
+  Object.assign(e,data);e.events=[];
+  if(data.balanceVersion!==1){const spent=Math.max(0,(data.maxShots||3)-data.shots);e.maxShots=Math.max(1,3+(e.perks.extra||0)-(e.perks.sacrifice||0));e.shots=Math.max(0,e.maxShots-spent);if(e.state==='ready'&&!e.shots)e.state=e.score>=e.target?'cleared':'over';for(const f of e.fish)if(e.routeId==='echo'&&f.reborn){f.echoed=true;f.reborn=false;}e.balanceVersion=1;e.shotCost=0;e.shotOfferings=0;}
+  return e;
  }
 }

@@ -56,3 +56,43 @@ test('mid-shot saves resume identically with the new skills',()=>{
 test('legacy saves retain upgrades and score on the new map',()=>{
  const old=fresh(9).snapshot();delete old.version;old.total=954;old.perks={extra:1,rich:2};old.stage=5;const e=FishEngine.restore(old);assert.equal(e.total,954);assert.equal(e.stage,5);assert.equal(e.shots,4);assert.equal(e.baseValue,22);assert.equal(e.migrated,true);assert.equal(FishEngine.restore({}),null);assert.equal(FishEngine.restore(null),null);
 });
+test('every forbidden relic has an explicit cost at all upgrade levels',()=>{
+ const cult=PERKS.filter(p=>p.cult);assert.equal(cult.length,9);for(const p of cult)for(let level=1;level<=p.max;level++)assert.ok(p.cost(level).length>15,p.id);
+ assert.match(PERKS.find(p=>p.id==='gaze').cost(2),/36/);assert.match(PERKS.find(p=>p.id==='blackTide').cost(2),/30/);
+});
+test('tentacle penalty applies to direct hits but leaves indirect scoring intact',()=>{
+ for(let level=1;level<=3;level++){const e=fresh();e.stage=9;e.perks={tentacle:level};e.setup();ordinary(e);e.shoot();const f=e.fish[0],value=e.baseValue;e.pop(e.pegs[0],f);assert.equal(f.points,Math.round(value*(1-.15*level)));const before=f.points;e.pop(e.pegs[1],f,true);assert.equal(f.points-before,value);}
+});
+test('gaze and maw shrink the jackpot, and wide and safety only offset their own cost',()=>{
+ const e=fresh();e.perks={gaze:2,maw:1};assert.equal(e.bins()[2].w,28);assert.equal(e.bins().reduce((s,b)=>s+b.w,0),420);
+ e.perks.wide=1;assert.equal(e.bins()[2].w,54);e.perks.safe=1;assert.equal(e.bins()[0].m,2);assert.equal(e.bins()[2].w,54);
+});
+test('brood charges for successful hatches only, and never taxes the settled score',()=>{
+ const e=fresh();ordinary(e);e.perks.brood=1;e.shoot();const f=e.fish[0];f.hits=5;f.points=100;e.score=300;e.total=300;e.pop(e.pegs[0],f);assert.equal(e.spawned,3);assert.equal(f.points,66);assert.equal(e.shotCost,44);assert.equal(e.score,300);assert.equal(e.total,300);
+ e.spawned=7;f.hits=11;f.points=100;e.pop(e.pegs[1],f);assert.equal(f.points,110);assert.equal(e.shotCost,44);
+});
+test('each sacrifice rank removes a shot, including the second rank',()=>{
+ const e=fresh();e.perks.sacrifice=1;e.setup();assert.equal(e.maxShots,2);e.perks.sacrifice=2;e.setup();assert.equal(e.maxShots,1);e.perks.extra=2;e.setup();assert.equal(e.maxShots,3);
+});
+test('black tide reduces original bubbles without reducing the map target or ghost value',()=>{
+ const e=fresh();e.stage=9;e.setup();const target=e.target,budget=e.mapBudget;e.perks.blackTide=2;e.setup();assert.equal(e.target,target);assert.equal(e.mapBudget,budget);
+ const p={kind:'normal',spectral:false};assert.equal(e.pegValue(p),Math.round(34*.7));p.spectral=true;assert.equal(e.pegValue(p),Math.round(34*.75));e.perks.rich=1;p.spectral=false;assert.ok(e.pegValue(p)>Math.round(34*.7));
+});
+test('star offerings yield no score or effects and can never regrow',()=>{
+ const e=fresh();e.perks={stars:1,blackTide:2};e.shoot();const f=e.fish[0];e.pegs=Array.from({length:9},(_,i)=>({id:i,x:100+i*30,y:100,r:8,kind:i<3?'bomb':'normal',alive:true,revived:false,spectral:false}));f.x=90;f.y=100;e.events=[];e.starRitual(f);
+ assert.equal(f.points,6*e.pegValue(e.pegs[3]));assert.equal(f.hits,0);assert.equal(e.shotOfferings,3);assert.equal(e.events.filter(v=>v.type==='nova').length,0);assert.ok(e.pegs.slice(0,3).every(p=>p.consumed&&!p.alive));e.regrow();assert.ok(e.pegs.slice(0,3).every(p=>!p.alive));
+});
+test('dream forgets only the current fish score, once, and only when larvae spawn',()=>{
+ const e=fresh();e.perks.dream=1;e.setup();e.shoot();const f=e.fish[0];f.points=120;e.score=300;e.total=300;e.dream(f);assert.equal(f.points,0);assert.equal(e.shotCost,120);assert.equal(e.total,300);f.points=30;e.dream(f);assert.equal(f.points,30);assert.equal(e.spawned,3);
+ const capped=e.makeFish(200,300,0,0);capped.points=70;e.spawned=7;e.dream(capped);assert.equal(capped.points,70);
+});
+test('echo is free, rebirth pays half, and neither can bounce twice',()=>{
+ const e=fresh();e.perks.rebirth=1;e.routeId='echo';e.setup();e.shoot();e.pegs=[];const f=e.fish[0];f.points=100;f.x=210;f.y=504;e.step(1/120);assert.equal(f.echoed,true);assert.equal(f.points,100);assert.equal(e.shotCost,0);
+ f.y=504;f.vy=100;e.step(1/120);assert.equal(f.reborn,true);assert.equal(f.points,50);assert.equal(e.shotCost,50);
+ f.y=504;f.vy=100;e.step(1/120);assert.equal(e.score,150);assert.equal(e.fish.length,0);
+});
+test('old 2.0 saves receive the new shot limit without restoring spent shots',()=>{
+ const old=fresh().snapshot();delete old.balanceVersion;old.perks={sacrifice:2};old.maxShots=2;old.shots=1;old.score=0;old.total=90;
+ const e=FishEngine.restore(old);assert.equal(e.maxShots,1);assert.equal(e.shots,0);assert.equal(e.total,90);assert.equal(e.state,'over');assert.equal(e.balanceVersion,1);
+ old.shots=2;const unspent=FishEngine.restore(old);assert.equal(unspent.shots,1);assert.equal(unspent.state,'ready');
+});
