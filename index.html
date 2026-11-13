@@ -8,7 +8,7 @@
   <title>再弹一条 · 深海低语</title>
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./style.css?v=2.0">
-  <link rel="stylesheet" href="./arcade.css?v=2.0"><link rel="stylesheet" href="./depth.css?v=2.1">
+  <link rel="stylesheet" href="./arcade.css?v=2.0"><link rel="stylesheet" href="./depth.css?v=2.2">
 </head>
 <body>
   <div class="app">
@@ -26,7 +26,7 @@
         </section>
         <aside class="sidebar">
           <section class="journey card"><div class="section-label"><h2>向深海，下潜</h2><span id="journeyCount">1 / 10</span></div><div id="route" class="route"></div><div class="run-total"><span>本轮累计</span><strong id="total">0 <small>分</small></strong></div></section>
-          <section class="cult-card card"><div class="section-label"><h2>◉ 深海侵蚀</h2><span><b id="cultValue">0</b> / 12+</span></div><strong id="cultName">理智清明</strong><div class="cult-track"><div id="cultMeter"></div></div><p id="cultCopy"></p><button class="curse-details" id="curseDetails" disabled>禁忌力量都有代价</button></section><section class="build card"><div class="section-label"><h2>我的小鱼流派</h2><span class="tiny-pill" id="buildCount">0 个升级</span></div><div id="upgrades"><div class="empty-build"><span>✧</span><p>每次过关，三选一升级</p><small>下一条鱼，会有点不一样。</small></div></div></section>
+          <section class="cult-card card"><div class="section-label"><h2>◉ 深海侵蚀</h2><span><b id="cultValue">0</b> / <span id="cultCap">16</span> 层</span></div><strong id="cultName">理智清明</strong><div class="cult-track"><div id="cultMeter"></div></div><p id="cultCopy"></p><button class="curse-details" id="curseDetails">查看统一侵蚀</button></section><section class="build card"><div class="section-label"><h2>我的小鱼流派</h2><span class="tiny-pill" id="buildCount">0 个升级</span></div><div id="upgrades"><div class="empty-build"><span>✧</span><p>每次过关，三选一升级</p><small>下一条鱼，会有点不一样。</small></div></div></section>
           <section class="tip-card"><span class="tip-icon">✳</span><div><h3 id="tipTitle">一点点小策略</h3><p id="tipText">底部金色鱼缸有 3 倍奖励。好角度，比用力更重要。</p></div></section>
           <button class="restart-link" id="restart">↺ 开始新的一轮</button>
         </aside>
@@ -35,6 +35,6 @@
     </main>
   </div>
   <div class="modal-backdrop" id="modal" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" id="modalCard"></section></div>
-  <script type="module" src="./game.js?v=2.1"></script>
+  <script type="module" src="./game.js?v=2.2"></script>
 </body>
 </html>

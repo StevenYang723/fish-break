@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {FishEngine,PERKS,ROUTES} from './engine.js';
+import {FishEngine,PERKS,ROUTES,CORRUPTION_TIERS,MAX_CULT_STACKS,corruptionPenalty,nextCorruptionTier} from './engine.js';
 const fresh=(seed=10)=>new FishEngine(seed,{skipDraft:true});
 function finish(e){for(let n=0;n<1200&&e.state==='flying';n++){e.step(1/60);assert.ok(e.fish.length<=7);for(const f of e.fish)assert.ok([f.x,f.y,f.vx,f.vy,f.points].every(Number.isFinite));}assert.notEqual(e.state,'flying');}
 function settle(e,a=0){assert.equal(e.shoot(a),true);finish(e);}
@@ -28,10 +28,10 @@ test('starter draft, offered choices, route selection, caps and rerolls',()=>{
  e.perks={};e.routeId='ritual';e.state='cleared';assert.equal(e.choices().filter(p=>p.cult).length,2);
 });
 test('maw and safety interact correctly without changing board width',()=>{
- const e=fresh();for(let n=0;n<=2;n++){e.perks.wide=n;assert.equal(e.bins().reduce((s,b)=>s+b.w,0),420);}e.perks.maw=1;assert.deepEqual(e.bins().map(b=>b.m),[.5,2,5,2,.5]);e.perks.safe=1;assert.deepEqual(e.bins().map(b=>b.m),[2,2,5,2,2]);
+ const e=fresh();for(let n=0;n<=2;n++){e.perks.wide=n;assert.equal(e.bins().reduce((s,b)=>s+b.w,0),420);}e.perks.maw=1;assert.deepEqual(e.bins().map(b=>b.m),[1,2,5,2,1]);e.perks.safe=1;assert.deepEqual(e.bins().map(b=>b.m),[2,2,5,2,2]);
 });
 test('last-shot and sacrifice multiply landing exactly once',()=>{
- const e=fresh();e.perks={last:1,sacrifice:1};e.setup();assert.equal(e.shots,2);e.shots=1;e.shoot(0);e.fish[0].x=210;e.fish[0].y=504;e.fish[0].points=50;e.step(1/120);assert.equal(e.score,Math.round(50*3*1.65*1.5));const total=e.total;e.step(1);assert.equal(e.total,total);
+ const e=fresh();e.perks={last:1,sacrifice:1};e.setup();assert.equal(e.shots,3);e.shots=1;e.shoot(0);e.fish[0].x=210;e.fish[0].y=504;e.fish[0].points=50;e.step(1/120);assert.equal(e.score,Math.round(50*3*1.65*1.5));const total=e.total;e.step(1);assert.equal(e.total,total);
 });
 test('lightning and gaze do not recurse into direct-hit combos',()=>{
  const e=fresh();ordinary(e);e.perks={chain:1,combo:1,gaze:1};e.shoot(0);const f=e.fish[0];for(let n=0;n<5;n++)e.pop(e.pegs.find(p=>p.alive),f);assert.equal(f.hits,5);assert.equal(e.pegs.filter(p=>!p.alive).length,10);assert.equal(e.events.filter(x=>x.type==='lightning').length,2);assert.equal(e.events.filter(x=>x.type==='gaze').length,3);
@@ -48,7 +48,7 @@ test('rebirth and regrowth cannot loop forever',()=>{
  e.pegs.forEach(p=>{p.alive=false;p.revived=false;});e.regrow();assert.equal(e.pegs.filter(p=>p.alive).length,25);assert.ok(e.pegs.filter(p=>p.alive).every(p=>p.spectral));for(let n=0;n<10;n++){e.pegs.forEach(p=>p.alive=false);e.regrow();}assert.equal(e.pegs.filter(p=>p.alive).length,0);
 });
 test('corruption has four distinct mutation thresholds',()=>{
- const e=fresh();assert.equal(e.cultTier,0);e.perks.tentacle=1;assert.equal(e.cultTier,1);e.perks.brood=1;assert.equal(e.cultTier,2);e.perks.tentacle=2;e.perks.maw=1;assert.equal(e.cultTier,3);e.perks.stars=2;assert.equal(e.cultTier,4);
+ const e=fresh();assert.equal(e.cultTier,0);for(const [count,tier] of [[1,1],[2,1],[3,2],[5,2],[6,3],[8,3],[9,4],[16,4]]){e.perks=cultBuild(count);assert.equal(e.cultTier,tier);}
 });
 test('mid-shot saves resume identically with the new skills',()=>{
  const e=fresh(124);e.stage=9;e.perks={brood:2,tentacle:3,dream:1,rebirth:1,blackTide:2,sacrifice:1};e.setup();e.shoot(-.6);for(let i=0;i<70;i++)e.step(1/60);const copy=FishEngine.restore(e.snapshot());assert.ok(copy);finish(e);finish(copy);assert.equal(copy.score,e.score);assert.equal(copy.state,e.state);assert.deepEqual(copy.pegs,e.pegs);assert.deepEqual(copy.perks,e.perks);
@@ -56,43 +56,66 @@ test('mid-shot saves resume identically with the new skills',()=>{
 test('legacy saves retain upgrades and score on the new map',()=>{
  const old=fresh(9).snapshot();delete old.version;old.total=954;old.perks={extra:1,rich:2};old.stage=5;const e=FishEngine.restore(old);assert.equal(e.total,954);assert.equal(e.stage,5);assert.equal(e.shots,4);assert.equal(e.baseValue,22);assert.equal(e.migrated,true);assert.equal(FishEngine.restore({}),null);assert.equal(FishEngine.restore(null),null);
 });
-test('every forbidden relic has an explicit cost at all upgrade levels',()=>{
- const cult=PERKS.filter(p=>p.cult);assert.equal(cult.length,9);for(const p of cult)for(let level=1;level<=p.max;level++)assert.ok(p.cost(level).length>15,p.id);
- assert.match(PERKS.find(p=>p.id==='gaze').cost(2),/36/);assert.match(PERKS.find(p=>p.id==='blackTide').cost(2),/30/);
+
+function cultBuild(count){const perks={};for(const p of PERKS.filter(p=>p.cult)){const n=Math.min(count,p.max);if(n)perks[p.id]=n;count-=n;}assert.equal(count,0);return perks;}
+function corrupted(count,stage=1){const e=fresh();e.stage=stage;e.perks=cultBuild(count);e.setup();return e;}
+test('corruption counts repeated acquisitions, not unique skills or normal upgrades',()=>{
+ const e=fresh();e.perks={tentacle:3,extra:2,wide:2};assert.equal(e.cultCount,3);assert.equal(e.corruption,3);assert.equal(MAX_CULT_STACKS,16);
+ for(const p of PERKS.filter(p=>p.cult)){assert.equal(p.cult,1);assert.equal(p.cost,undefined);}e.perks={maw:1,dream:1,rebirth:1};assert.deepEqual(e.curse,corruptionPenalty(3));
 });
-test('tentacle penalty applies to direct hits but leaves indirect scoring intact',()=>{
- for(let level=1;level<=3;level++){const e=fresh();e.stage=9;e.perks={tentacle:level};e.setup();ordinary(e);e.shoot();const f=e.fish[0],value=e.baseValue;e.pop(e.pegs[0],f);assert.equal(f.points,Math.round(value*(1-.15*level)));const before=f.points;e.pop(e.pegs[1],f,true);assert.equal(f.points-before,value);}
+test('tiers are cumulative and continue worsening after ten acquisitions',()=>{
+ assert.equal(CORRUPTION_TIERS.length,10);
+ for(let n=0;n<=16;n++){const c=corruptionPenalty(n);assert.equal(c.centerShrink,n>=1?14:0);assert.equal(c.edgeMultiplier,n>=2?.5:1);assert.equal(c.percent,n>=3?10+Math.max(0,n-10)*5:0);assert.equal(c.directMultiplier,n>=4?.85:1);assert.equal(c.shotLoss,n>=5?1:0);assert.equal(c.offerings,n>=6?2:0);assert.equal(c.broodTax,n>=7?.25:0);assert.equal(c.rebounceTax,n>=8?.5:0);assert.equal(c.forget,n>=9);assert.equal(c.originalMultiplier,n>=10?.85:1);if(n<16)assert.equal(nextCorruptionTier(n).level,n+1);}
+ assert.equal(corruptionPenalty(-2).stacks,0);assert.equal(corruptionPenalty(NaN).stacks,0);assert.equal(corruptionPenalty(Infinity).stacks,0);assert.equal(corruptionPenalty(100).stacks,16);assert.equal(corruptionPenalty(2.7).stacks,2);
 });
-test('gaze and maw shrink the jackpot, and wide and safety only offset their own cost',()=>{
- const e=fresh();e.perks={gaze:2,maw:1};assert.equal(e.bins()[2].w,28);assert.equal(e.bins().reduce((s,b)=>s+b.w,0),420);
- e.perks.wide=1;assert.equal(e.bins()[2].w,54);e.perks.safe=1;assert.equal(e.bins()[0].m,2);assert.equal(e.bins()[2].w,54);
+test('same count yields identical penalties regardless of the cult skills chosen',()=>{
+ const a=fresh(),b=fresh();a.perks={tentacle:3,gaze:2};b.perks={maw:1,dream:1,rebirth:1,stars:2};a.setup();b.setup();assert.deepEqual(a.curse,b.curse);assert.equal(a.shots,b.shots);assert.equal(a.bins()[2].w,b.bins()[2].w);assert.equal(a.bins()[0].m,b.bins()[0].m);
 });
-test('brood charges for successful hatches only, and never taxes the settled score',()=>{
- const e=fresh();ordinary(e);e.perks.brood=1;e.shoot();const f=e.fish[0];f.hits=5;f.points=100;e.score=300;e.total=300;e.pop(e.pegs[0],f);assert.equal(e.spawned,3);assert.equal(f.points,66);assert.equal(e.shotCost,44);assert.equal(e.score,300);assert.equal(e.total,300);
- e.spawned=7;f.hits=11;f.points=100;e.pop(e.pegs[1],f);assert.equal(f.points,110);assert.equal(e.shotCost,44);
+test('tiers one and two narrow the jackpot and halve outer bins after normal compensation',()=>{
+ const e=corrupted(1);assert.equal(e.bins()[2].w,78);assert.equal(e.bins()[0].m,1);e.perks.wide=2;assert.equal(e.bins()[2].w,130);e.perks.tentacle=2;assert.deepEqual(e.bins().map(b=>b.m),[.5,2,3,2,.5]);e.perks.safe=1;assert.equal(e.bins()[0].m,1);assert.equal(e.bins().reduce((sum,b)=>sum+b.w,0),420);
 });
-test('each sacrifice rank removes a shot, including the second rank',()=>{
- const e=fresh();e.perks.sacrifice=1;e.setup();assert.equal(e.maxShots,2);e.perks.sacrifice=2;e.setup();assert.equal(e.maxShots,1);e.perks.extra=2;e.setup();assert.equal(e.maxShots,3);
+test('tier three deducts the final shot once across all fish and after save restore',()=>{
+ for(const order of [[101,102],[102,101]]){const e=corrupted(3);e.shoot();e.pegs=[];e.spawnBrood(e.fish[0],1);e.events=[];e.fish.forEach((f,i)=>{f.points=order[i];f.x=210;f.y=i?300:504;f.tentacleCooldown=9;});e.step(1/120);const copy=FishEngine.restore(e.snapshot());
+  for(const game of [e,copy]){game.fish[0].y=504;game.fish[0].vy=100;game.step(1/120);assert.equal(game.shotGross,609);assert.equal(game.score,548);assert.equal(game.lastShotDeducted,61);const total=game.total;game.step(1);assert.equal(game.total,total);}
+  assert.equal(e.events.filter(ev=>ev.type==='land').reduce((sum,ev)=>sum+ev.value,0),548);
+ }
 });
-test('black tide reduces original bubbles without reducing the map target or ghost value',()=>{
- const e=fresh();e.stage=9;e.setup();const target=e.target,budget=e.mapBudget;e.perks.blackTide=2;e.setup();assert.equal(e.target,target);assert.equal(e.mapBudget,budget);
- const p={kind:'normal',spectral:false};assert.equal(e.pegValue(p),Math.round(34*.7));p.spectral=true;assert.equal(e.pegValue(p),Math.round(34*.75));e.perks.rich=1;p.spectral=false;assert.ok(e.pegValue(p)>Math.round(34*.7));
+test('tier four reduces direct bubble hits only and keeps indirect and machine points',()=>{
+ const e=corrupted(4,9);ordinary(e);e.shoot();const f=e.fish[0];e.pop(e.pegs.find(p=>p.alive),f);assert.equal(f.points,Math.round(34*.85));const before=f.points;e.pop(e.pegs.find(p=>p.alive),f,true);assert.equal(f.points-before,34);assert.equal(e.machineBonus(f,1),34);
 });
-test('star offerings yield no score or effects and can never regrow',()=>{
- const e=fresh();e.perks={stars:1,blackTide:2};e.shoot();const f=e.fish[0];e.pegs=Array.from({length:9},(_,i)=>({id:i,x:100+i*30,y:100,r:8,kind:i<3?'bomb':'normal',alive:true,revived:false,spectral:false}));f.x=90;f.y=100;e.events=[];e.starRitual(f);
- assert.equal(f.points,6*e.pegValue(e.pegs[3]));assert.equal(f.hits,0);assert.equal(e.shotOfferings,3);assert.equal(e.events.filter(v=>v.type==='nova').length,0);assert.ok(e.pegs.slice(0,3).every(p=>p.consumed&&!p.alive));e.regrow();assert.ok(e.pegs.slice(0,3).every(p=>!p.alive));
+test('tier five loses one launch independent of blood contract and extra launches compensate',()=>{
+ const e=corrupted(4);assert.equal(e.maxShots,3);e.perks=cultBuild(5);e.setup();assert.equal(e.maxShots,2);e.perks.extra=2;e.setup();assert.equal(e.maxShots,4);e.perks={sacrifice:2};e.setup();assert.equal(e.maxShots,3);
 });
-test('dream forgets only the current fish score, once, and only when larvae spawn',()=>{
- const e=fresh();e.perks.dream=1;e.setup();e.shoot();const f=e.fish[0];f.points=120;e.score=300;e.total=300;e.dream(f);assert.equal(f.points,0);assert.equal(e.shotCost,120);assert.equal(e.total,300);f.points=30;e.dream(f);assert.equal(f.points,30);assert.equal(e.spawned,3);
- const capped=e.makeFish(200,300,0,0);capped.points=70;e.spawned=7;e.dream(capped);assert.equal(capped.points,70);
+test('tier six seeded offerings give no points or explosions and never regrow',()=>{
+ const a=corrupted(6),b=corrupted(6);for(const e of [a,b]){e.routeId='bloom';e.pegs.forEach(p=>p.kind='bomb');e.shoot();assert.equal(e.pegs.filter(p=>p.consumed).length,2);assert.equal(e.fish[0].points,0);assert.equal(e.events.filter(ev=>ev.type==='nova').length,0);assert.equal(e.events.filter(ev=>ev.type==='offering').length,2);e.regrow();assert.ok(e.pegs.filter(p=>p.consumed).every(p=>!p.alive));}
+ assert.deepEqual(a.pegs.filter(p=>p.consumed).map(p=>p.id),b.pegs.filter(p=>p.consumed).map(p=>p.id));
+ const e=corrupted(6);e.pegs=e.pegs.slice(0,1);e.shoot();assert.equal(e.pegs.filter(p=>p.consumed).length,1);
 });
-test('echo is free, rebirth pays half, and neither can bounce twice',()=>{
- const e=fresh();e.perks.rebirth=1;e.routeId='echo';e.setup();e.shoot();e.pegs=[];const f=e.fish[0];f.points=100;f.x=210;f.y=504;e.step(1/120);assert.equal(f.echoed,true);assert.equal(f.points,100);assert.equal(e.shotCost,0);
- f.y=504;f.vy=100;e.step(1/120);assert.equal(f.reborn,true);assert.equal(f.points,50);assert.equal(e.shotCost,50);
- f.y=504;f.vy=100;e.step(1/120);assert.equal(e.score,150);assert.equal(e.fish.length,0);
+test('tier seven charges per successful spawning event, never per child or at capacity',()=>{
+ const e=corrupted(7);e.shoot();e.score=300;e.total=300;const f=e.fish[0];f.points=100;assert.equal(e.spawnBrood(f,2),2);assert.equal(f.points,75);f.points=100;assert.equal(e.spawnBrood(f,8),4);assert.equal(f.points,75);f.points=100;assert.equal(e.spawnBrood(f,2),0);assert.equal(f.points,100);assert.equal(e.score,300);assert.equal(e.total,300);
 });
-test('old 2.0 saves receive the new shot limit without restoring spent shots',()=>{
- const old=fresh().snapshot();delete old.balanceVersion;old.perks={sacrifice:2};old.maxShots=2;old.shots=1;old.score=0;old.total=90;
- const e=FishEngine.restore(old);assert.equal(e.maxShots,1);assert.equal(e.shots,0);assert.equal(e.total,90);assert.equal(e.state,'over');assert.equal(e.balanceVersion,1);
- old.shots=2;const unspent=FishEngine.restore(old);assert.equal(unspent.shots,1);assert.equal(unspent.state,'ready');
+test('tier seven also applies to ordinary wall split, without requiring the brood relic',()=>{
+ const e=fresh();e.perks={tentacle:3,gaze:2,stars:2,split:1};e.setup();e.shoot();e.pegs=[];const f=e.fish[0];f.points=100;f.x=1;f.vx=-100;e.step(1/120);assert.equal(e.spawned,2);assert.equal(f.points,75);
+});
+test('tier eight taxes both echo and regeneration, retaining their separate bounce limits',()=>{
+ const e=fresh();e.perks={tentacle:3,gaze:2,stars:2,rebirth:1};e.routeId='echo';e.setup();e.shoot();e.pegs=[];const f=e.fish[0];f.points=100;f.x=210;f.y=504;e.step(1/120);assert.equal(f.echoed,true);assert.equal(f.points,50);f.y=504;f.vy=100;e.step(1/120);assert.equal(f.reborn,true);assert.equal(f.points,25);f.y=504;f.vy=100;e.step(1/120);assert.equal(e.fish.length,0);assert.equal(e.score,Math.round(75*.9));
+});
+test('tier nine forgets on first well or portal entry even without the dream relic',()=>{
+ for(const entry of ['well','portal']){const e=corrupted(9,7);e.shoot();e.pegs=[];e.bumpers=[];e.rotors=[];e.altars=[];e.vents=[];const f=e.fish[0];f.points=120;e.total=300;e.score=300;
+  if(entry==='well'){f.x=e.wells[0].x+10;f.y=e.wells[0].y;}else{f.x=e.portals[0].x;f.y=e.portals[0].y;}f.vx=0;f.vy=0;e.step(1/120);assert.equal(f.points,0);assert.equal(f.mindBroken,true);assert.equal(e.total,300);f.points=30;e.enterDream(f);assert.equal(f.points,30);
+  const child=e.makeFish(200,300,0,0,true);child.points=50;e.enterDream(child);assert.equal(child.points,50);
+ }
+});
+test('tier ten lowers originals but preserves full ghost value and raw map target',()=>{
+ const base=fresh();base.stage=9;base.setup();const e=corrupted(10,9);assert.equal(e.mapBudget,base.mapBudget);assert.equal(e.target,base.target);const p={kind:'normal',spectral:false};assert.equal(e.pegValue(p),Math.round(34*.85));assert.equal(e.pegValue(p,false),34);p.spectral=true;assert.equal(e.pegValue(p),34);e.perks.rich=1;assert.equal(e.pegValue(p),48);
+});
+test('individual relic penalties are gone below their shared unlock tiers',()=>{
+ for(const id of ['tentacle','gaze','brood','sacrifice','blackTide','maw','stars','dream','rebirth']){const e=fresh();e.perks={[id]:1};e.setup();assert.equal(e.maxShots,3);assert.equal(e.bins()[2].w,78);assert.equal(e.bins()[0].m,1);assert.equal(e.curse.multiplier,1);e.shoot();assert.equal(e.pegs.filter(p=>p.consumed).length,0);const f=e.fish[0];f.points=100;e.spawnBrood(f,1);e.enterDream(f);assert.equal(f.points,100);assert.equal(e.pegValue({kind:'normal',spectral:false}),10);}
+});
+test('old 2.1 saves recalculate shared launch limits while preserving spent shots and score',()=>{
+ const old=fresh().snapshot();old.balanceVersion=1;old.perks={sacrifice:2};old.maxShots=1;old.shots=0;old.state='over';old.score=90;old.total=590;const e=FishEngine.restore(old);assert.equal(e.maxShots,3);assert.equal(e.shots,2);assert.equal(e.score,90);assert.equal(e.total,590);assert.equal(e.state,'ready');assert.equal(e.balanceVersion,2);
+ old.perks=cultBuild(5);old.maxShots=3;old.shots=1;old.state='ready';const reduced=FishEngine.restore(old);assert.equal(reduced.maxShots,2);assert.equal(reduced.shots,0);assert.equal(reduced.state,'over');
+});
+test('new saved shared penalties and once-per-shot flags resume without being applied twice',()=>{
+ const e=corrupted(10,8);e.shoot();e.pegs=[];const f=e.fish[0];f.points=100;e.enterDream(f);f.points=50;const copy=FishEngine.restore(e.snapshot());copy.enterDream(copy.fish[0]);assert.equal(copy.fish[0].points,50);assert.equal(copy.fish[0].mindBroken,true);assert.equal(copy.shots,e.shots);assert.deepEqual(copy.curse,e.curse);
 });
