@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#08172e">
+  <meta name="description" content="再弹一条：一分钟的摸鱼时间。弹射小鱼、触发机关，用三选一升级组合属于你的肉鸽玩法。手机电脑都能玩。">
+  <title>再弹一条 — 摸鱼也要有回响</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./arcade.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="再弹一条首页"><span class="brand-icon"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M8 20 2 12v16z" fill="currentColor"/><ellipse cx="22" cy="20" rx="14" ry="10" fill="currentColor"/><circle cx="29" cy="18" r="2" fill="#fff"/><path d="m18 10 6-6 5 8" fill="currentColor"/></svg></span><span>再弹一条<small>FISH BREAK CLUB</small></span></a>
+      <nav aria-label="游戏设置"><span class="local-tag"><i></i> 随时暂停，随心摸鱼</span><button class="icon-btn" id="sound" aria-label="开启音效" title="音效">♪<span class="mute-dot"></span></button><button class="icon-btn" id="help" aria-label="玩法说明" title="玩法说明">?</button></nav>
+    </header>
+    <main>
+      <section class="intro"><div><p class="eyebrow"><span class="season-pill">街机 · 肉鸽</span> NEON OCEAN / VOL. 01</p><h1>再弹<span>一条！</span><span class="title-spark">✦</span></h1><p class="intro-copy">潜入霓虹深海，弹出你的神级连锁。</p></div><div class="best"><span>♛ 个人最高纪录</span><strong id="best">0</strong><small>HIGH SCORE <span>✦</span></small></div></section>
+      <div class="game-layout">
+        <section class="game-panel" aria-label="弹珠游戏">
+          <div class="scorebar"><div class="level-badge" id="levelBadge">01</div><div class="score-block"><div class="score-heading"><span id="levelName">浅水试弹</span><span id="targetLabel">目标 260</span></div><div class="progress-track"><div id="progress"></div></div><div class="score-numbers"><strong id="score">0</strong><span> / <span id="target">260</span> 分</span></div></div><div class="ammo"><span>剩余小鱼</span><div id="ammo" aria-label="剩余 3 条小鱼"></div></div><button class="icon-btn pause-btn" id="pause" aria-label="暂停游戏">Ⅱ</button></div>
+          <div class="board-wrap" id="boardWrap"><canvas id="board" width="420" height="544" tabindex="0" aria-label="弹珠场地，拖动瞄准松手发射，也可用左右方向键瞄准，空格发射"></canvas><div class="board-tag"><span class="pulse"></span><span id="boardStatus">你的摸鱼时间</span></div><div class="combo-hud" id="comboHud"><strong id="comboNumber">0</strong><span>COMBO</span><small id="comboWord">NICE SHOT</small></div><div class="shot-toast" id="shotToast" aria-live="polite"></div><div class="aim-hint" id="aimHint">拖动瞄准 <span>↘</span> 松手发射</div></div>
+          <div class="controlbar"><div><span class="status-dot"></span><span id="statusText">准备好，弹出第一条</span><small id="shotPreview">瞄准气泡，落入倍率鱼缸</small></div><button class="shoot-btn" id="shoot">发射小鱼 <span>↗</span></button></div>
+        </section>
+        <aside class="sidebar">
+          <section class="journey card"><div class="section-label"><h2>这趟摸鱼之旅</h2><span id="journeyCount">1 / 5</span></div><div id="route" class="route"></div><div class="run-total"><span>本轮累计</span><strong id="total">0 <small>分</small></strong></div></section>
+          <section class="build card"><div class="section-label"><h2>我的小鱼流派</h2><span class="tiny-pill" id="buildCount">0 个升级</span></div><div id="upgrades"><div class="empty-build"><span>✧</span><p>每次过关，三选一升级</p><small>下一条鱼，会有点不一样。</small></div></div></section>
+          <section class="tip-card"><span class="tip-icon">✳</span><div><h3 id="tipTitle">一点点小策略</h3><p id="tipText">底部金色鱼缸有 3 倍奖励。好角度，比用力更重要。</p></div></section>
+          <button class="restart-link" id="restart">↺ 开始新的一轮</button>
+        </aside>
+      </div>
+      <footer><span>专注摸鱼，适时冒泡。</span><span>本机自动存档 <i>·</i> 一轮约 3–5 分钟</span></footer>
+    </main>
+  </div>
+  <div class="modal-backdrop" id="modal" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" id="modalCard"></section></div>
+  <script type="module" src="./game.js"></script>
+</body>
+</html>
