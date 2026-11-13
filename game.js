@@ -1,4 +1,4 @@
-import {FishEngine,LEVELS,PERKS,BIOMES,FINAL_STAGE,W,H} from './engine.js?v=2.0';
+import {FishEngine,LEVELS,PERKS,BIOMES,FINAL_STAGE,W,H} from './engine.js?v=2.0.1';
 import {renderScene} from './renderer.js?v=2.0';
 const $=id=>document.getElementById(id);
 const canvas=$('board'),ctx=canvas.getContext('2d');

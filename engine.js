@@ -37,7 +37,7 @@ export const PERKS=[
  {id:'blackTide',icon:'≈',name:'黑潮回响',tag:'克苏鲁',desc:'每发结束后，25% 已破气泡以幽灵形态重生一次；叠加提高比例。',max:2,cult:1},
  {id:'maw',icon:'⏣',name:'虚空吞口',tag:'克苏鲁',desc:'中央鱼缸升至 ×5，两侧降为 ×0.5；可搭配保底好运。',max:1,cult:2},
  {id:'stars',icon:'✵',name:'群星归位',tag:'克苏鲁',desc:'每撞破 8 个气泡，仪式冲击击碎最近 6 个；叠加增加目标。',max:2,cult:2},
- {id:'dream',icon:'☽',name:'梦魇鳃',tag:'克苏鲁',desc:'主鱼首次进入漩涡或传送门，召唤 2 条梦境幼体。',max:1,cult:1},
+ {id:'dream',icon:'☽',name:'梦魇鳃',tag:'克苏鲁',desc:'每层生成梦境漩涡；主鱼首次进入漩涡或传送门，召唤 2 条幼体。',max:1,cult:1},
  {id:'rebirth',icon:'☥',name:'深潜者再生',tag:'克苏鲁',desc:'主鱼首次落入鱼缸前弹回场内，保留本次得分。',max:1,cult:1}
 ];
 export function rng(seed){let s=seed>>>0;return()=>{s+=0x6D2B79F5;let t=Math.imul(s^s>>>15,1|s);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296;};}
@@ -62,7 +62,7 @@ export class FishEngine{
   if(this.routeId==='current'&&!this.currents.length)this.currents=[{x:0,y:255,w:420,h:70,ax:this.flowSign*200}];
   if(this.stage>=4)this.vents=[{x:mirror===1?78:342,y:448,r:17}];
   if(this.stage>=5)this.rotors=[{x:mirror===1?270:150,y:180,r:28,angle:random()*Math.PI}];
-  if(this.stage>=6)this.wells=[{x:210,y:312,r:60,spin:mirror}];
+  if(this.stage>=6||this.perks.dream)this.wells=[{x:210,y:312,r:60,spin:mirror}];
   if(this.stage>=7)this.portals=[{x:42,y:345,r:17,to:1},{x:377,y:145,r:17,to:0}];
   if(this.stage>=8||this.routeId==='ritual')this.altars=[{x:210,y:224,r:19,charges:0}];
   if(this.stage>=9)this.vents.push({x:mirror===1?342:78,y:448,r:17});

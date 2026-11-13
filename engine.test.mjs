@@ -39,7 +39,8 @@ test('lightning and gaze do not recurse into direct-hit combos',()=>{
 test('tentacles capture without contact and brood stops at seven fish',()=>{
  const e=fresh();ordinary(e);e.perks={tentacle:1,brood:2};e.shoot(0);const f=e.fish[0];e.pegs[0].x=f.x+45;e.pegs[0].y=f.y;f.tentacleCooldown=0;e.step(1/120);assert.equal(e.pegs[0].alive,false);assert.equal(f.hits,0);for(let n=0;n<18;n++)e.pop(e.pegs.find(p=>p.alive),f);assert.equal(e.spawned,7);assert.equal(e.fish.length,7);
 });
-test('vents return fish upward and dream summons only once',()=>{
+test('vents return fish upward and dream works from the first layer',()=>{
+ const starter=fresh();starter.perks.dream=1;starter.setup();assert.equal(starter.wells.length,1);starter.shoot(0);starter.fish[0].x=220;starter.fish[0].y=312;starter.step(1/120);assert.equal(starter.spawned,3);
  const e=fresh();e.stage=8;e.perks={dream:1,spring:1};e.setup();e.shoot(0);e.pegs=[];const f=e.fish[0],v=e.vents[0];f.x=v.x;f.y=v.y;f.vy=10;e.step(1/120);assert.ok(f.vy<0);assert.equal(f.points,3*e.baseValue);const w=e.wells[0];f.x=w.x+10;f.y=w.y;e.step(1/120);assert.equal(e.spawned,3);f.x=w.x+10;f.y=w.y;e.step(1/120);assert.equal(e.spawned,3);
 });
 test('rebirth and regrowth cannot loop forever',()=>{
