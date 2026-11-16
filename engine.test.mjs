@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {FishEngine,PERKS,ROUTES,CORRUPTION_TIERS,MAX_CULT_STACKS,corruptionPenalty,nextCorruptionTier} from './engine.js';
+import {FishEngine,isBossStage,difficultyFactor,PERKS,ROUTES,CORRUPTION_TIERS,MAX_CULT_STACKS,corruptionPenalty,nextCorruptionTier} from './engine.js';
 const fresh=(seed=10)=>new FishEngine(seed,{skipDraft:true});
 function finish(e){for(let n=0;n<1200&&e.state==='flying';n++){e.step(1/60);assert.ok(e.fish.length<=7);for(const f of e.fish)assert.ok([f.x,f.y,f.vx,f.vy,f.points].every(Number.isFinite));}assert.notEqual(e.state,'flying');}
 function settle(e,a=0){assert.equal(e.shoot(a),true);finish(e);}
 function ordinary(e){e.pegs.forEach(p=>{p.kind='normal';p.gold=false;});}
 test('maps grow rewards and preserve all targets in 400 seeded layouts',()=>{
  for(let seed=1;seed<=40;seed++){const e=fresh(seed);let lastCount=0;
-  for(let stage=1;stage<=10;stage++){e.stage=stage;e.setup();assert.ok(e.mapCount>=lastCount);assert.equal(e.mapCount,(6+e.biomeIndex)*(7+Math.ceil(e.biomeIndex/2))+8);assert.ok(e.target<e.mapBudget*1.7&&e.target>e.mapBudget*.4);assert.ok(e.pegs.every(p=>p.x>0&&p.x<420&&p.y>100&&p.y<470));lastCount=e.mapCount;}
+  for(let stage=1;stage<=10;stage++){e.stage=stage;e.setup();assert.ok(e.mapCount>=lastCount);assert.equal(e.mapCount,(6+e.biomeIndex)*(7+Math.ceil(e.biomeIndex/2))+8);assert.ok(e.target>e.mapBudget*.4&&e.target<e.mapBudget*6.1);assert.equal(!!e.boss,isBossStage(stage));assert.ok(e.pegs.every(p=>p.x>0&&p.x<420&&p.y>100&&p.y<470));lastCount=e.mapCount;}
   assert.equal(e.mapCount,98);assert.equal(e.baseValue,34);assert.equal(e.depth,8500);
  }
 });

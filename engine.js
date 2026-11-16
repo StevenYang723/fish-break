@@ -1,4 +1,6 @@
 export const W=420,H=544,FINAL_STAGE=10;
+export const isBossStage=stage=>stage===3||(stage>=10&&stage%5===0);
+export const difficultyFactor=stage=>.42+Math.min(9,stage-1)*.14+Math.max(0,stage-5)*.12;
 export const BIOMES=[
  {name:'日光浅滩',depth:30,desc:'阳光还在，冒险刚刚开始',colors:['#123e58','#175264','#1b605d'],accent:'#71eed9'},
  {name:'荧光海林',depth:350,desc:'海流与热泉，改变每次落点',colors:['#102f42','#123e47','#185247'],accent:'#72e9b4'},
@@ -61,7 +63,10 @@ export function nextCorruptionTier(count){const level=Math.min(MAX_CULT_STACKS,c
 export function rng(seed){let s=seed>>>0;return()=>{s+=0x6D2B79F5;let t=Math.imul(s^s>>>15,1|s);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296;};}
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export class FishEngine{
- constructor(seed=Date.now(),{skipDraft=false}={}){this.version=2;this.balanceVersion=2;this.seed=seed;this.stage=1;this.total=0;this.perks={};this.bestCombo=0;this.rerolls=3;this.draftRoll=0;this.routeId='treasure';this.events=[];this.setup();if(!skipDraft)this.state='draft';}
+ constructor(seed=Date.now(),{skipDraft=false}={}){this.version=2;this.balanceVersion=2;this.rulesVersion=3;this.seed=seed;this.stage=1;this.total=0;this.perks={};this.bestCombo=0;this.rerolls=3;this.draftRoll=0;this.routeId='treasure';this.events=[];this.setup();if(!skipDraft)this.state='draft';}
+ get bossAnchors(){return this.pegs.filter(p=>p.kind==='anchor'&&p.alive);}
+ get bossArmor(){return this.boss?this.bossAnchors.length*.3:0;}
+ get bossIntent(){if(!this.boss)return '';const b=this.boss;if(!b.hp)return '守卫已击退 · 航道开启';if(!this.bossAnchors.length)return '甲壳碎裂 · 本发伤害提高 25%';if(b.sealBroken&&b.turn%3===2)return '船锚已断 · 本发中央封锁解除';if(b.turn%3!==2&&!this.bossAnchors.some(p=>p.side===b.turn%2))return '对应船锚已断 · 本发横扫解除';if(b.turn%3===2)return '沉船封锁 · 中央鱼缸倍率减半，拆掉一锚可解除';const side=b.turn%2;return (side?'右':'左')+'钳横扫 · 下半场海流向'+(side?'左':'右')+'推，拆掉'+(side?'右':'左')+'锚可解除';}
  get biomeIndex(){return Math.min(4,Math.floor((this.stage-1)/2));}
  get biome(){return BIOMES[this.biomeIndex];}
  get depth(){return this.stage>10?8500+(this.stage-10)*1200:this.biome.depth+(this.stage-1)%2*[120,300,700,1200,2500][this.biomeIndex];}
@@ -72,11 +77,11 @@ export class FishEngine{
  get cultName(){return ['理智清明','低语侵染','古神凝视','异化共生','旧日苏醒'][this.cultTier];}
  get route(){return ROUTES.find(r=>r.id===this.routeId)||ROUTES[1];}
  setup(){
-  const random=rng(this.seed+this.stage*731+ROUTES.findIndex(r=>r.id===this.routeId)*229),tier=this.biomeIndex,extraDepth=Math.max(0,this.stage-10);
-  this.baseValue=10+tier*6+extraDepth*3;this.score=0;this.maxShots=Math.max(1,3+(this.perks.extra||0)-this.curse.shotLoss);this.shots=this.maxShots;
+  const random=rng(this.seed+this.stage*731+ROUTES.findIndex(r=>r.id===this.routeId)*229),tier=this.biomeIndex,extraDepth=Math.max(0,this.stage-10),bossRoom=isBossStage(this.stage);
+  this.baseValue=10+tier*6+extraDepth*3;this.score=0;this.maxShots=Math.max(1,(bossRoom?4:3)+(this.perks.extra||0)-this.curse.shotLoss);this.shots=this.maxShots;
   this.fish=[];this.time=0;this.state='ready';this.shotPoints=0;this.shotGross=0;this.lastShot=0;this.lastShotGross=0;this.lastShotDeducted=0;this.events=[];this.nextFishId=0;this.draftRoll=0;
   this.pegs=[];this.bumpers=[];this.portals=[];this.rotors=[];this.currents=[];this.vents=[];this.wells=[];this.altars=[];
-  this.layout=Math.floor(random()*4);this.flowSign=random()<.5?-1:1;const mirror=random()<.5?-1:1;
+  this.boss=null;this.lastShotDamage=0;this.layout=Math.floor(random()*4);this.flowSign=random()<.5?-1:1;const mirror=random()<.5?-1:1;
   if(this.stage>=2)this.bumpers=[{x:mirror===1?102:318,y:265,r:16},{x:mirror===1?312:108,y:369,r:17}];
   if(this.stage>=3)this.currents=[{x:0,y:270,w:420,h:62,ax:this.flowSign*(this.routeId==='current'?220:110)}];
   if(this.routeId==='current'&&!this.currents.length)this.currents=[{x:0,y:255,w:420,h:70,ax:this.flowSign*200}];
@@ -87,29 +92,30 @@ export class FishEngine{
   if(this.stage>=8||this.routeId==='ritual')this.altars=[{x:210,y:224,r:19,charges:0}];
   if(this.stage>=9)this.vents.push({x:mirror===1?342:78,y:448,r:17});
   const rows=6+tier,cols=7+Math.ceil(tier/2),desired=rows*cols+(this.routeId==='treasure'?8:0);
-  const blocked=(x,y)=>[...this.bumpers,...this.vents,...this.portals,...this.altars].some(b=>Math.hypot(x-b.x,y-b.y)<b.r+12)||this.rotors.some(r=>Math.hypot(x-r.x,y-r.y)<r.r+10);
-  const add=(x,y)=>{if(blocked(x,y)||this.pegs.some(p=>Math.hypot(x-p.x,y-p.y)<20))return false;const roll=random(),boost=this.routeId==='treasure'?.12:0;const kind=roll<.035+tier*.025+boost*.4?'pearl':roll<.07+tier*.05+boost*.4?'bomb':roll<.20+tier*.05+boost?'gold':'normal';this.pegs.push({id:this.pegs.length,x,y,r:tier>2?7.6:8.5,kind,gold:kind==='gold',alive:true,revived:false,spectral:false});return true;};
+  const blocked=(x,y)=>(bossRoom&&(Math.hypot(x-210,y-276)<69||[102,318].some(ax=>Math.hypot(x-ax,y-174)<30)))||[...this.bumpers,...this.vents,...this.portals,...this.altars].some(b=>Math.hypot(x-b.x,y-b.y)<b.r+12)||this.rotors.some(r=>Math.hypot(x-r.x,y-r.y)<r.r+10);
+  const add=(x,y)=>{if(this.pegs.length>=desired-(bossRoom?2:0)||blocked(x,y)||this.pegs.some(p=>Math.hypot(x-p.x,y-p.y)<20))return false;const roll=random(),boost=this.routeId==='treasure'?.12:0;const kind=roll<.035+tier*.025+boost*.4?'pearl':roll<.07+tier*.05+boost*.4?'bomb':roll<.20+tier*.05+boost?'gold':'normal';this.pegs.push({id:this.pegs.length,x,y,r:tier>2?7.6:8.5,kind,gold:kind==='gold',alive:true,revived:false,spectral:false});return true;};
   for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
    const x=35+col*350/(cols-1),y=128+row*307/(rows-1),dx=this.layout===0?Math.sin(row*1.5)*12:this.layout===1?(row%2?9:-9):this.layout===2?Math.sin(col+row)*9:Math.cos(row+col*.6)*12,dy=this.layout===2?Math.cos(col*1.3)*10:this.layout===3?Math.abs(col-(cols-1)/2)*4:0;
    if(this.layout===1){const a=col/cols*Math.PI*2+row*.23,r=38+row*18;add(clamp(210+Math.cos(a)*r,24,396),clamp(285+Math.sin(a)*r*.93,116,451));}
    else add(clamp(x+dx+(random()-.5)*6,24,396),clamp(y+dy+(random()-.5)*5,116,451));
   }
-  for(let i=0;this.pegs.length<desired&&i<3500;i++)add(25+random()*370,119+random()*333);
-  this.mapBudget=this.pegs.reduce((s,p)=>s+this.pegValue(p,false),0);this.target=Math.round(this.mapBudget*(.42+Math.min(9,this.stage-1)*.14)/10)*10;this.mapCount=this.pegs.length;
+  for(let i=0;this.pegs.length<desired-(bossRoom?2:0)&&i<3500;i++)add(25+random()*370,119+random()*333);
+  if(bossRoom)for(const [side,x] of [102,318].entries())this.pegs.push({id:this.pegs.length,x,y:174,r:14,kind:'anchor',side,hp:this.stage>=10?3:2,maxHp:this.stage>=10?3:2,alive:true,revived:false,spectral:false});
+  this.mapBudget=this.pegs.reduce((s,p)=>s+this.pegValue(p,false),0);this.target=Math.round(this.mapBudget*difficultyFactor(this.stage)/10)*10;this.mapCount=this.pegs.length;if(bossRoom){const hp=Math.round(this.mapBudget*(this.stage===3?1.45:6+extraDepth*.12)/10)*10;this.boss={name:this.stage===3?'沉船寄居蟹':'深渊寄居蟹',hp,maxHp:hp,turn:0,sealBroken:false,lastBlocked:0};this.target=hp;}
  }
- pegValue(p,upgraded=true){const base=this.baseValue;let value=base*(p.kind==='pearl'?4:p.kind==='gold'?2.5:p.kind==='bomb'?1.5:1);if(upgraded){if(p.kind==='normal')value+=base*.4*(this.perks.rich||0);if((p.kind==='gold'||p.kind==='pearl')&&this.perks.gold)value*=2;}if(upgraded&&!p.spectral)value*=this.curse.originalMultiplier;if(this.routeId==='current')value*=1.25;return Math.round(value);}
- bins(){const mid=92+(this.perks.wide||0)*26-this.curse.centerShrink,other=(W-mid)/4;let x=0;return[1,2,3,2,1].map((m,i)=>{if(this.perks.maw&&i===2)m=5;if(this.perks.safe&&(i===0||i===4))m=Math.max(2,m);if(i===0||i===4)m*=this.curse.edgeMultiplier;const w=i===2?mid:other,b={x,w,m};x+=w;return b;});}
+ pegValue(p,upgraded=true){const base=this.baseValue;let value=base*(p.kind==='anchor'?4:p.kind==='pearl'?4:p.kind==='gold'?2.5:p.kind==='bomb'?1.5:1);if(upgraded){if(p.kind==='normal')value+=base*.4*(this.perks.rich||0);if((p.kind==='gold'||p.kind==='pearl')&&this.perks.gold)value*=2;}if(upgraded&&!p.spectral)value*=this.curse.originalMultiplier;if(this.routeId==='current')value*=1.25;return Math.round(value);}
+ bins(){const mid=92+(this.perks.wide||0)*26-this.curse.centerShrink,other=(W-mid)/4;let x=0;return[1,2,3,2,1].map((m,i)=>{if(this.perks.maw&&i===2)m=5;if(this.perks.safe&&(i===0||i===4))m=Math.max(2,m);if(i===0||i===4)m*=this.curse.edgeMultiplier;if(i===2&&this.boss&&this.boss.turn%3===2&&this.bossAnchors.length&&!this.boss.sealBroken)m*=.5;const w=i===2?mid:other,b={x,w,m};x+=w;return b;});}
  makeFish(x,y,vx,vy,child=false){return{id:++this.nextFishId,x,y,vx,vy,r:child?6:8,points:0,hits:0,child,split:false,wallHits:0,reborn:false,echoed:false,dreamed:false,mindBroken:false,portalCooldown:0,bumperCooldown:0,ventCooldown:0,altarCooldown:0,tentacleCooldown:.3,pierces:3*(this.perks.pierce||0),trail:[]};}
- shoot(angle=0){if(this.state!=='ready'||this.shots<1||!Number.isFinite(angle))return false;angle=clamp(angle,-1.05,1.05);this.shots--;this.fish=[this.makeFish(210,52,Math.sin(angle)*360,Math.cos(angle)*360)];this.spawned=1;this.offerBubbles();if(this.perks.volley)this.spawnBrood(this.fish[0],2);this.shotPoints=0;this.shotGross=0;this.shotTime=0;this.isLast=this.shots===0;this.state='flying';this.events.push({type:'shoot'});return true;}
+ shoot(angle=0){if(this.state!=='ready'||this.shots<1||!Number.isFinite(angle))return false;angle=clamp(angle,-1.05,1.05);this.shots--;if(this.boss)this.boss.sealBroken=false;this.fish=[this.makeFish(210,52,Math.sin(angle)*360,Math.cos(angle)*360)];this.spawned=1;this.offerBubbles();if(this.perks.volley)this.spawnBrood(this.fish[0],2);this.shotPoints=0;this.shotGross=0;this.shotTime=0;this.isLast=this.shots===0;this.state='flying';this.events.push({type:'shoot'});return true;}
  spawnBrood(f,n){const before=this.spawned;for(let i=0;i<n&&this.spawned<7;i++){const a=(i%2?1:-1)*(.55+.18*Math.floor(i/2));this.fish.push(this.makeFish(clamp(f.x+(i%2?9:-9),10,410),f.y,Math.sin(a)*220,100+Math.abs(f.vy)*.4,true));this.spawned++;}const count=this.spawned-before;if(count){this.payCurse(f,this.curse.broodTax,'幼体供养');this.events.push({type:'brood',x:f.x,y:f.y});}return count;}
  payCurse(f,rate,label){const loss=Math.round(f.points*rate);if(loss){f.points=Math.max(0,f.points-loss);this.events.push({type:'curse',x:f.x,y:f.y-20,text:label+' −'+loss});}return loss;}
- offerBubbles(){const count=this.curse.offerings;if(!count)return;const random=rng(this.seed+this.stage*967+this.shots*2311),chosen=this.pegs.filter(p=>p.alive).map(p=>({p,n:random()})).sort((a,b)=>a.n-b.n).slice(0,count);for(const {p} of chosen){p.alive=false;p.consumed=true;this.events.push({type:'offering',x:p.x,y:p.y});}if(chosen.length)this.events.push({type:'curse',x:210,y:105,text:'深海献祭 · '+chosen.length+' 颗'});}
+ offerBubbles(){const count=this.curse.offerings;if(!count)return;const random=rng(this.seed+this.stage*967+this.shots*2311),chosen=this.pegs.filter(p=>p.alive&&p.kind!=='anchor').map(p=>({p,n:random()})).sort((a,b)=>a.n-b.n).slice(0,count);for(const {p} of chosen){p.alive=false;p.consumed=true;this.events.push({type:'offering',x:p.x,y:p.y});}if(chosen.length)this.events.push({type:'curse',x:210,y:105,text:'深海献祭 · '+chosen.length+' 颗'});}
  enterDream(f){if(this.curse.forget&&!f.child&&!f.mindBroken){f.mindBroken=true;this.payCurse(f,1,'梦境遗忘');}this.dream(f);}
  starRitual(f){this.strike(f,4+2*this.perks.stars,'gaze');this.events.push({type:'ritual',x:f.x,y:f.y});}
  nearby(f,n,r=Infinity){return this.pegs.filter(p=>p.alive&&Math.hypot(p.x-f.x,p.y-f.y)<r).sort((a,b)=>Math.hypot(a.x-f.x,a.y-f.y)-Math.hypot(b.x-f.x,b.y-f.y)).slice(0,n);}
  strike(f,n,type,r=Infinity){for(const p of this.nearby(f,n,r)){this.events.push({type,x:f.x,y:f.y,tx:p.x,ty:p.y});this.pop(p,f,true);}}
- pop(p,f,indirect=false){if(!p.alive)return;p.alive=false;const value=Math.round(this.pegValue(p)*(indirect?1:this.curse.directMultiplier));f.points+=value;if(!indirect){f.hits++;this.bestCombo=Math.max(this.bestCombo,f.hits);}this.events.push({type:'pop',x:p.x,y:p.y,value,gold:p.gold,kind:p.kind,hits:indirect?0:f.hits});
-  if(p.kind==='bomb'){this.events.push({type:'nova',x:p.x,y:p.y});for(const q of this.nearby(p,4,53)){q.alive=false;const val=this.pegValue(q);f.points+=val;this.events.push({type:'pop',x:q.x,y:q.y,value:val,kind:q.kind,gold:q.gold,hits:0});}}
+ pop(p,f,indirect=false,splash=false){if(!p.alive)return;if(p.kind==='anchor'){p.hp--;this.events.push({type:'anchorHit',x:p.x,y:p.y,hp:p.hp});if(p.hp>0)return;if(this.boss){this.boss.sealBroken=true;this.events.push({type:'armorBreak',x:p.x,y:p.y});}}p.alive=false;const value=Math.round(this.pegValue(p)*(indirect?1:this.curse.directMultiplier));f.points+=value;if(!indirect){f.hits++;this.bestCombo=Math.max(this.bestCombo,f.hits);}this.events.push({type:'pop',x:p.x,y:p.y,value,gold:p.gold,kind:p.kind,hits:indirect?0:f.hits});
+  if(p.kind==='bomb'&&!splash){this.events.push({type:'nova',x:p.x,y:p.y});for(const q of this.nearby(p,4,53))this.pop(q,f,true,true);}
   if(indirect)return;
   if(f.hits%3===0){if(this.perks.combo){const bonus=this.baseValue*2*this.perks.combo;f.points+=bonus;this.events.push({type:'text',x:f.x,y:f.y-22,text:'连击 +'+bonus});}if(this.perks.chain)this.strike(f,2,'lightning');}
   if(this.perks.blast&&f.hits%4===0){this.strike(f,4*this.perks.blast,'nova',58);this.events.push({type:'nova',x:f.x,y:f.y});}
@@ -125,7 +131,7 @@ export class FishEngine{
   for(const f of [...this.fish]){
    for(const k of ['portalCooldown','bumperCooldown','ventCooldown','altarCooldown','tentacleCooldown'])f[k]=Math.max(0,f[k]-dt);
    f.vy+=300*dt;
-   if(!draining){for(const z of this.currents)if(f.y>z.y&&f.y<z.y+z.h)f.vx+=z.ax*dt;
+   if(!draining){if(this.boss&&this.boss.turn%3!==2&&f.y>320&&f.y<405&&this.bossAnchors.some(p=>p.side===this.boss.turn%2))f.vx+=(this.boss.turn%2?-250:250)*dt;for(const z of this.currents)if(f.y>z.y&&f.y<z.y+z.h)f.vx+=z.ax*dt;
     for(const well of this.wells){const dx=well.x-f.x,dy=well.y-f.y,d=Math.hypot(dx,dy);if(d<well.r&&d>4){const force=220*(1-d/well.r);f.vx+=(dx/d*force-dy/d*140*well.spin)*dt;f.vy+=(dy/d*force+dx/d*140*well.spin)*dt;this.enterDream(f);}}
     if(this.perks.magnet&&f.y>421)f.vx+=(210-f.x)*this.perks.magnet*3*dt;
    }
@@ -147,9 +153,10 @@ export class FishEngine{
    if(f.y>=503||this.shotTime>17){const bin=this.bins().find(b=>f.x>=b.x&&f.x<=b.x+b.w)||this.bins()[2],multiplier=(1+.65*(this.perks.sacrifice||0))*(this.isLast&&this.perks.last?1.5:1),gross=Math.round(Math.max(this.baseValue,f.points)*bin.m*multiplier),before=this.shotPoints;this.shotGross+=gross;this.shotPoints=Math.round(this.shotGross*this.curse.multiplier);this.events.push({type:'land',x:f.x,y:498,value:this.shotPoints-before,gross,m:bin.m});dead.add(f.id);}
   }
   this.fish=this.fish.filter(f=>!dead.has(f.id));
-  if(!this.fish.length){this.score+=this.shotPoints;this.total+=this.shotPoints;this.lastShot=this.shotPoints;this.lastShotGross=this.shotGross;this.lastShotDeducted=this.shotGross-this.shotPoints;if(this.lastShotDeducted)this.events.push({type:'curse',x:210,y:452,text:'侵蚀 '+this.cultCount+' 层 · −'+this.lastShotDeducted});this.state=this.score>=this.target?'cleared':this.shots===0?'over':'ready';if(this.state==='ready')this.regrow();this.events.push({type:'settle',points:this.shotPoints,state:this.state});}
+  if(!this.fish.length){this.score+=this.shotPoints;this.total+=this.shotPoints;this.lastShot=this.shotPoints;this.lastShotGross=this.shotGross;this.lastShotDeducted=this.shotGross-this.shotPoints;if(this.lastShotDeducted)this.events.push({type:'curse',x:210,y:452,text:'侵蚀 '+this.cultCount+' 层 · −'+this.lastShotDeducted});if(this.boss){const factor=this.bossAnchors.length?1-this.bossArmor:1.25;this.lastShotDamage=Math.round(this.shotPoints*factor);this.boss.lastBlocked=Math.max(0,this.shotPoints-this.lastShotDamage);this.boss.hp=Math.max(0,this.boss.hp-this.lastShotDamage);this.events.push({type:'bossDamage',x:210,y:260,value:this.lastShotDamage,defeated:this.boss.hp===0});}this.state=(this.boss?this.boss.hp===0:this.score>=this.target)?'cleared':this.shots===0?'over':'ready';if(this.state==='ready'){this.regrow();if(this.boss){this.boss.turn++;this.boss.sealBroken=false;this.bossSupply();}}this.events.push({type:'settle',points:this.shotPoints,damage:this.lastShotDamage,state:this.state});}
  }
- regrow(){const rate=(this.routeId==='bloom'?.2:0)+.25*(this.perks.blackTide||0);if(!rate)return;const dead=this.pegs.filter(p=>!p.alive&&!p.revived&&!p.consumed),random=rng(this.seed+this.stage*91+this.shots*881),chosen=dead.map(p=>({p,n:random()})).sort((a,b)=>a.n-b.n).slice(0,Math.ceil(dead.length*Math.min(.8,rate)));for(const {p} of chosen){p.alive=true;p.revived=true;p.spectral=!!this.perks.blackTide;}if(chosen.length)this.events.push({type:'regrow',count:chosen.length,x:210,y:350});}
+ bossSupply(){const random=rng(this.seed+this.stage*313+this.boss.turn*571),dead=this.pegs.filter(p=>!p.alive&&!p.consumed&&p.kind!=='anchor'),chosen=dead.map(p=>({p,n:random()})).sort((a,b)=>a.n-b.n).slice(0,Math.ceil(this.mapCount*.22));for(const {p} of chosen)p.alive=true;if(chosen.length)this.events.push({type:'supply',x:210,y:350,count:chosen.length});}
+ regrow(){const rate=(this.routeId==='bloom'?.2:0)+.25*(this.perks.blackTide||0);if(!rate)return;const dead=this.pegs.filter(p=>!p.alive&&!p.revived&&!p.consumed&&p.kind!=='anchor'),random=rng(this.seed+this.stage*91+this.shots*881),chosen=dead.map(p=>({p,n:random()})).sort((a,b)=>a.n-b.n).slice(0,Math.ceil(dead.length*Math.min(.8,rate)));for(const {p} of chosen){p.alive=true;p.revived=true;p.spectral=!!this.perks.blackTide;}if(chosen.length)this.events.push({type:'regrow',count:chosen.length,x:210,y:350});}
  choices(){const random=rng(this.seed+this.stage*1301+this.draftRoll*4531+(this.state==='draft'?99:0)),pool=PERKS.filter(p=>(this.perks[p.id]||0)<p.max).map(p=>({p,n:random()})).sort((a,b)=>a.n-b.n).map(x=>x.p),cult=pool.filter(p=>p.cult),normal=pool.filter(p=>!p.cult),preferred=this.routeId==='ritual'&&this.state!=='draft'?[...cult.slice(0,2),...normal.slice(0,1)]:[...cult.slice(0,1),...normal.slice(0,1)];for(const p of pool)if(preferred.length<3&&!preferred.includes(p))preferred.push(p);return preferred.sort((a,b)=>pool.indexOf(a)-pool.indexOf(b));}
  routeChoices(){const random=rng(this.seed+this.stage*1723);return ROUTES.map(r=>({r,n:random()})).sort((a,b)=>a.n-b.n).slice(0,2).map(x=>x.r);}
  reroll(){if(!['cleared','draft'].includes(this.state)||this.rerolls<=0)return false;this.rerolls--;this.draftRoll++;return true;}
@@ -162,6 +169,7 @@ export class FishEngine{
   if(!Number.isFinite(data.total)||!Number.isFinite(data.score)||!Number.isFinite(data.shots)||!data.perks||['vents','wells','altars','currents'].some(k=>!Array.isArray(data[k])))return null;
   Object.assign(e,data);e.events=[];
   if(data.balanceVersion!==2){const spent=Math.max(0,(data.maxShots||3)-data.shots);e.maxShots=Math.max(1,3+(e.perks.extra||0)-e.curse.shotLoss);e.shots=Math.max(0,e.maxShots-spent);if(e.state==='over'&&e.shots>0)e.state='ready';if(e.state==='ready'&&!e.shots)e.state=e.score>=e.target?'cleared':'over';if(data.balanceVersion==null)for(const f of e.fish)if(e.routeId==='echo'&&f.reborn){f.echoed=true;f.reborn=false;}e.balanceVersion=2;e.shotGross=e.state==='flying'?data.shotPoints:0;if(e.state==='flying')e.shotPoints=Math.round(e.shotGross*e.curse.multiplier);e.lastShotGross=0;e.lastShotDeducted=0;delete e.shotCost;delete e.shotOfferings;}
+  if(data.rulesVersion!==3){e.rulesVersion=3;e.boss=null;e.lastShotDamage=0;}
   return e;
  }
 }
