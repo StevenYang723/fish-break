@@ -1,8 +1,9 @@
-import {BOSS_BODY} from './engine.js?v=2.3.1';
+import {renderDeepBoss,renderDeepTargets} from './deep-boss-art.js?v=2.4';
+import {BOSS_BODY} from './engine.js?v=2.4';
 const TAU=Math.PI*2;
 const circle=(c,x,y,r,fill,stroke)=>{c.beginPath();c.arc(x,y,r,0,TAU);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.stroke();}};
 export function renderBoss(c,e,t){
- if(!e.boss)return;const b=e.boss,armored=e.bossAnchors.length>0,sway=0;
+ if(!e.boss)return;if(e.bossKind!=='crab'){renderDeepBoss(c,e,t);return;}const b=e.boss,armored=e.bossAnchors.length>0,sway=0;
  c.save();
  // Telegraph the next shot's sweep directly on the board.
  if(b.hp&&armored&&b.turn%3!==2&&e.bossAnchors.some(p=>p.side===b.turn%2)){
@@ -37,7 +38,7 @@ export function renderBoss(c,e,t){
  c.textAlign='center';c.font='700 9px "Segoe UI","Microsoft YaHei"';c.fillStyle=armored?'#e9c299':'#ffd1bb';c.fillText(!b.hp?'GUARDIAN DEFEATED':armored?'可撞击 · 拆锚伤害更高':'完全破甲 · 碰撞造成重击',0,59);c.restore();
 }
 export function renderAnchors(c,e,t){
- if(!e.boss)return;c.save();
+ if(!e.boss)return;if(e.bossKind!=='crab'){renderDeepTargets(c,e,t);return;}c.save();
  for(const p of e.pegs.filter(p=>p.kind==='anchor')){
   if(!p.alive){c.strokeStyle='#bd93623a';c.lineWidth=1;circle(c,p.x,p.y,13,null,'#bd93623a');continue;}
   c.strokeStyle='#c9ab7270';c.lineWidth=2;c.setLineDash([3,5]);c.beginPath();c.moveTo(p.x,p.y+18);c.quadraticCurveTo(p.x,260,210+(p.side?26:-26),250);c.stroke();c.setLineDash([]);

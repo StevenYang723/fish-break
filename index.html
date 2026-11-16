@@ -8,7 +8,7 @@
   <title>再弹一条 · 深海低语</title>
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./style.css?v=2.0">
-  <link rel="stylesheet" href="./arcade.css?v=2.0"><link rel="stylesheet" href="./depth.css?v=2.3.1">
+  <link rel="stylesheet" href="./arcade.css?v=2.0"><link rel="stylesheet" href="./depth.css?v=2.4">
 </head>
 <body>
   <div class="app">
@@ -17,7 +17,7 @@
       <nav aria-label="游戏设置"><span class="local-tag"><i></i> 随时暂停，随心摸鱼</span><button class="icon-btn" id="sound" aria-label="开启音效" title="音效">♪<span class="mute-dot"></span></button><button class="icon-btn" id="help" aria-label="玩法说明" title="玩法说明">?</button></nav>
     </header>
     <main>
-      <section class="intro"><div><p class="eyebrow"><span class="season-pill">深潜 · 克苏鲁</span> THE ABYSS / VOL. 02</p><h1>再弹<span>一条！</span><span class="title-spark">✦</span></h1><p class="intro-copy">越向深处，越不像鱼。 <a id="trialLink" class="boss-trial-link" href="?mode=boss">⚓ Boss 试战</a></p></div><div class="best"><span>♛ 个人最高纪录</span><strong id="best">0</strong><small>HIGH SCORE <span>✦</span></small></div></section>
+      <section class="intro"><div><p class="eyebrow"><span class="season-pill">深潜 · 克苏鲁</span> THE ABYSS / VOL. 02</p><h1>再弹<span>一条！</span><span class="title-spark">✦</span></h1><p class="intro-copy">越向深处，越不像鱼。 <a id="trialLink" class="boss-trial-link" href="?mode=boss">⚓ Boss 试战</a> <button class="boss-select" id="bossSelect">守卫图鉴</button></p></div><div class="best"><span>♛ 个人最高纪录</span><strong id="best">0</strong><small>HIGH SCORE <span>✦</span></small></div></section>
       <div class="game-layout">
         <section class="game-panel" aria-label="弹珠游戏">
           <div class="scorebar"><div class="level-badge" id="levelBadge">01</div><div class="score-block"><div class="score-heading"><span id="levelName">浅水试弹</span><span id="targetLabel">目标 260</span></div><div class="progress-track"><div id="progress"></div></div><div class="score-numbers"><strong id="score">0</strong><span> / <span id="target">260</span> <span id="scoreUnit">分</span></span></div></div><div class="ammo"><span>剩余小鱼</span><div id="ammo" aria-label="剩余 3 条小鱼"></div></div><button class="icon-btn pause-btn" id="pause" aria-label="暂停游戏">Ⅱ</button></div>
@@ -31,10 +31,10 @@
           <button class="restart-link" id="restart">↺ 开始新的一轮</button>
         </aside>
       </div>
-      <footer><span>专注摸鱼，适时冒泡。</span><span>本机自动存档 <i>·</i> 10 层海域 · 24 种遗物</span></footer>
+      <footer><span>专注摸鱼，适时冒泡。</span><span>本机自动存档 <i>·</i> 10 层海域 · 24 种遗物 · 4 位守卫</span></footer>
     </main>
   </div>
   <div class="modal-backdrop" id="modal" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" id="modalCard"></section></div>
-  <script type="module" src="./game.js?v=2.3.1"></script>
+  <script type="module" src="./game.js?v=2.4"></script>
 </body>
 </html>

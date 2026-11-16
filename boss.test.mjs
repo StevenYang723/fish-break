@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {FishEngine,isBossStage,difficultyFactor,BOSS_BODY} from './engine.js';
-function boss(stage=3){const e=new FishEngine(17,{skipDraft:true});e.stage=stage;e.setup();return e;}
+function boss(stage=3){const e=new FishEngine(17,{skipDraft:true});e.stage=stage;e.setup({bossKind:'crab'});return e;}
 function land(e,points=1000){const f=e.fish[0];f.x=210;f.y=504;f.vx=0;f.vy=50;f.points=points;e.shotTime=14;e.step(1/120);}
 function finish(e){for(let n=0;n<1300&&e.state==='flying';n++)e.step(1/60);assert.notEqual(e.state,'flying');}
 test('boss schedule, shot allowance, and permanent anchors match all depths',()=>{
- for(const n of [1,2,4,6,9,11,14,16])assert.equal(isBossStage(n),false);
+ for(const n of [1,2,4,6,7,9,11,14,16])assert.equal(isBossStage(n),false);
  for(const n of [3,10,15,20]){const e=boss(n);assert.ok(e.boss);assert.equal(e.maxShots,4);assert.equal(e.bossAnchors.length,2);assert.equal(e.boss.hp,e.target);assert.equal(e.bossAnchors[0].hp,n===3?2:3);assert.ok(e.pegs.filter(p=>p.kind!=='anchor').every(p=>Math.hypot(p.x-210,p.y-276)>=69));}
  const e=boss();e.perks={extra:2,tentacle:3,gaze:2};e.setup();assert.equal(e.maxShots,5);
 });
@@ -32,7 +32,7 @@ test('corruption offerings never consume objectives, but all normal corruption r
  const e=boss();e.perks={tentacle:3,gaze:2,brood:1};e.setup();e.shoot();assert.equal(e.bossAnchors.length,2);assert.equal(e.pegs.filter(p=>p.consumed).length,2);assert.equal(e.maxShots,3);assert.equal(e.bins()[0].m,.5);
 });
 test('mid-shot boss state, broken anchors, score and next action survive save/restore exactly',()=>{
- const e=boss(10);e.perks={volley:1,chain:1,rich:2,maw:1};e.setup();e.shoot(-.9);for(let i=0;i<150;i++)e.step(1/60);const copy=FishEngine.restore(e.snapshot());finish(e);finish(copy);assert.deepEqual(copy.boss,e.boss);assert.deepEqual(copy.pegs,e.pegs);assert.equal(copy.lastShotDamage,e.lastShotDamage);assert.equal(copy.state,e.state);
+ const e=boss(10);e.perks={volley:1,chain:1,rich:2,maw:1};e.setup({bossKind:'crab'});e.shoot(-.9);for(let i=0;i<150;i++)e.step(1/60);const copy=FishEngine.restore(e.snapshot());finish(e);finish(copy);assert.deepEqual(copy.boss,e.boss);assert.deepEqual(copy.pegs,e.pegs);assert.equal(copy.lastShotDamage,e.lastShotDamage);assert.equal(copy.state,e.state);
 });
 test('old runs keep current map and spent shots; boss rules start at the next generated stage',()=>{
  const old=new FishEngine(23,{skipDraft:true}).snapshot();delete old.rulesVersion;delete old.boss;old.stage=3;old.shots=1;old.total=900;old.target=300;const e=FishEngine.restore(old);assert.equal(e.boss,null);assert.equal(e.shots,1);assert.equal(e.target,300);assert.equal(e.total,900);assert.deepEqual(e.pegs,old.pegs);e.stage=10;e.setup();assert.ok(e.boss);assert.equal(e.maxShots,4);

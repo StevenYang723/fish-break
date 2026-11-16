@@ -7,7 +7,7 @@ function settle(e,a=0){assert.equal(e.shoot(a),true);finish(e);}
 function ordinary(e){e.pegs.forEach(p=>{p.kind='normal';p.gold=false;});}
 test('maps grow rewards and preserve all targets in 400 seeded layouts',()=>{
  for(let seed=1;seed<=40;seed++){const e=fresh(seed);let lastCount=0;
-  for(let stage=1;stage<=10;stage++){e.stage=stage;e.setup();assert.ok(e.mapCount>=lastCount);assert.equal(e.mapCount,(6+e.biomeIndex)*(7+Math.ceil(e.biomeIndex/2))+8);assert.ok(e.target>e.mapBudget*.4&&e.target<e.mapBudget*6.1);assert.equal(!!e.boss,isBossStage(stage));assert.ok(e.pegs.every(p=>p.x>0&&p.x<420&&p.y>100&&p.y<470));lastCount=e.mapCount;}
+  for(let stage=1;stage<=10;stage++){e.stage=stage;e.setup();assert.ok(e.mapCount>=lastCount);assert.equal(e.mapCount,(6+e.biomeIndex)*(7+Math.ceil(e.biomeIndex/2))+8);assert.ok(e.target>e.mapBudget*.4&&e.target<e.mapBudget*(e.boss?12.6:6.1));assert.equal(!!e.boss,isBossStage(stage));assert.ok(e.pegs.every(p=>p.x>0&&p.x<420&&p.y>100&&p.y<470));lastCount=e.mapCount;}
   assert.equal(e.mapCount,98);assert.equal(e.baseValue,34);assert.equal(e.depth,8500);
  }
 });
@@ -54,7 +54,7 @@ test('mid-shot saves resume identically with the new skills',()=>{
  const e=fresh(124);e.stage=9;e.perks={brood:2,tentacle:3,dream:1,rebirth:1,blackTide:2,sacrifice:1};e.setup();e.shoot(-.6);for(let i=0;i<70;i++)e.step(1/60);const copy=FishEngine.restore(e.snapshot());assert.ok(copy);finish(e);finish(copy);assert.equal(copy.score,e.score);assert.equal(copy.state,e.state);assert.deepEqual(copy.pegs,e.pegs);assert.deepEqual(copy.perks,e.perks);
 });
 test('legacy saves retain upgrades and score on the new map',()=>{
- const old=fresh(9).snapshot();delete old.version;old.total=954;old.perks={extra:1,rich:2};old.stage=5;const e=FishEngine.restore(old);assert.equal(e.total,954);assert.equal(e.stage,5);assert.equal(e.shots,4);assert.equal(e.baseValue,22);assert.equal(e.migrated,true);assert.equal(FishEngine.restore({}),null);assert.equal(FishEngine.restore(null),null);
+ const old=fresh(9).snapshot();delete old.version;old.total=954;old.perks={extra:1,rich:2};old.stage=5;const e=FishEngine.restore(old);assert.equal(e.total,954);assert.equal(e.stage,5);assert.equal(e.shots,5);assert.equal(e.boss.kind,'jelly');assert.equal(e.baseValue,22);assert.equal(e.migrated,true);assert.equal(FishEngine.restore({}),null);assert.equal(FishEngine.restore(null),null);
 });
 
 function cultBuild(count){const perks={};for(const p of PERKS.filter(p=>p.cult)){const n=Math.min(count,p.max);if(n)perks[p.id]=n;count-=n;}assert.equal(count,0);return perks;}
