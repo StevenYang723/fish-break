@@ -8,7 +8,7 @@
   <title>再弹一条 · 深海低语</title>
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./style.css?v=2.0">
-  <link rel="stylesheet" href="./arcade.css?v=2.0"><link rel="stylesheet" href="./depth.css?v=2.3">
+  <link rel="stylesheet" href="./arcade.css?v=2.0"><link rel="stylesheet" href="./depth.css?v=2.3.1">
 </head>
 <body>
   <div class="app">
@@ -21,7 +21,7 @@
       <div class="game-layout">
         <section class="game-panel" aria-label="弹珠游戏">
           <div class="scorebar"><div class="level-badge" id="levelBadge">01</div><div class="score-block"><div class="score-heading"><span id="levelName">浅水试弹</span><span id="targetLabel">目标 260</span></div><div class="progress-track"><div id="progress"></div></div><div class="score-numbers"><strong id="score">0</strong><span> / <span id="target">260</span> <span id="scoreUnit">分</span></span></div></div><div class="ammo"><span>剩余小鱼</span><div id="ammo" aria-label="剩余 3 条小鱼"></div></div><button class="icon-btn pause-btn" id="pause" aria-label="暂停游戏">Ⅱ</button></div>
-          <div class="depth-strip"><span>↓ <strong id="depthValue">30 m</strong> <span id="depthName">日光浅滩</span></span><span id="routeName">珍珠矿脉</span></div><section class="boss-panel" id="bossPanel" hidden aria-label="Boss 战况"><div class="boss-heading"><b id="bossName"></b><span id="bossRound"></span></div><div class="boss-health"><div id="bossHpBar"></div><span id="bossHp"></span></div><div class="boss-armor" id="bossArmor"></div><p id="bossIntent" aria-live="polite"></p></section><div class="board-wrap" id="boardWrap"><canvas id="board" width="420" height="544" tabindex="0" aria-label="弹珠场地，拖动瞄准松手发射，也可用左右方向键瞄准，空格发射"></canvas><div class="board-tag"><span class="pulse"></span><span id="boardStatus">你的摸鱼时间</span></div><div class="combo-hud" id="comboHud"><strong id="comboNumber">0</strong><span>COMBO</span><small id="comboWord">NICE SHOT</small></div><div class="shot-toast" id="shotToast" aria-live="polite"></div><div class="aim-hint" id="aimHint">拖动瞄准 <span>↘</span> 松手发射</div></div>
+          <div class="depth-strip"><span>↓ <strong id="depthValue">30 m</strong> <span id="depthName">日光浅滩</span></span><span id="routeName">珍珠矿脉</span></div><section class="boss-panel" id="bossPanel" hidden aria-label="Boss 战况"><div class="boss-heading"><b id="bossName"></b><span id="bossRound"></span></div><div class="boss-health"><div id="bossHpBar"></div><span id="bossHp"></span></div><div class="boss-armor" id="bossArmor"></div><p id="bossIntent" aria-live="polite"></p><p class="boss-feedback" id="bossFeedback" aria-live="polite"></p></section><div class="board-wrap" id="boardWrap"><canvas id="board" width="420" height="544" tabindex="0" aria-label="弹珠场地，拖动瞄准松手发射，也可用左右方向键瞄准，空格发射"></canvas><div class="board-tag"><span class="pulse"></span><span id="boardStatus">你的摸鱼时间</span></div><div class="combo-hud" id="comboHud"><strong id="comboNumber">0</strong><span>COMBO</span><small id="comboWord">NICE SHOT</small></div><div class="shot-toast" id="shotToast" aria-live="polite"></div><div class="aim-hint" id="aimHint">拖动瞄准 <span>↘</span> 松手发射</div></div>
           <div class="reward-strip"><span>◈ 得分点 <b id="mapCount">50 / 50 颗</b></span><span id="mapValue">基础 10 分 / 颗</span></div><div class="controlbar"><div><span class="status-dot"></span><span id="statusText">准备好，弹出第一条</span><small id="shotPreview">瞄准气泡，落入倍率鱼缸</small></div><button class="shoot-btn" id="shoot">发射小鱼 <span>↗</span></button></div>
         </section>
         <aside class="sidebar">
@@ -35,6 +35,6 @@
     </main>
   </div>
   <div class="modal-backdrop" id="modal" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" id="modalCard"></section></div>
-  <script type="module" src="./game.js?v=2.3"></script>
+  <script type="module" src="./game.js?v=2.3.1"></script>
 </body>
 </html>

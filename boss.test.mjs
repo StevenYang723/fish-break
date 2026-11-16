@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {FishEngine,isBossStage,difficultyFactor} from './engine.js';
+import {FishEngine,isBossStage,difficultyFactor,BOSS_BODY} from './engine.js';
 function boss(stage=3){const e=new FishEngine(17,{skipDraft:true});e.stage=stage;e.setup();return e;}
 function land(e,points=1000){const f=e.fish[0];f.x=210;f.y=504;f.vx=0;f.vy=50;f.points=points;e.shotTime=14;e.step(1/120);}
 function finish(e){for(let n=0;n<1300&&e.state==='flying';n++)e.step(1/60);assert.notEqual(e.state,'flying');}
@@ -39,4 +39,31 @@ test('old runs keep current map and spent shots; boss rules start at the next ge
 });
 test('difficulty continues past ten without scaling from the player score or chosen build',()=>{
  assert.ok(difficultyFactor(15)>difficultyFactor(10));assert.ok(difficultyFactor(25)>difficultyFactor(15));const a=boss(11),b=boss(11);b.perks={rich:3,gold:1,maw:1};b.total=999999;b.setup();assert.equal(a.target,b.target);assert.equal(a.mapBudget,b.mapBudget);assert.equal(a.boss,null);
+});
+
+function contact(e,index=0){const c=BOSS_BODY[index],f=e.fish[0];f.x=c.x;f.y=c.y-c.r-f.r+1;f.vx=0;f.vy=200;return f;}
+test('shell and both claws bounce fish and deal immediate damage before landing',()=>{
+ for(let i=0;i<3;i++){const e=boss();e.shoot();const f=contact(e,i),hp=e.boss.hp;assert.equal(e.hitBoss(f),true);assert.ok(f.vy<0);assert.ok(BOSS_BODY.every(c=>Math.hypot(f.x-c.x,f.y-c.y)>=c.r+f.r));assert.ok(e.boss.hp<hp);assert.equal(e.shotImpactDamage,hp-e.boss.hp);assert.equal(e.state,'flying');assert.equal(e.score,0);assert.equal(f.points,0);assert.match(e.boss.lastAttack,/实体命中/);assert.equal(e.events.filter(v=>v.type==='bossDamage').length,1);}
+});
+test('near misses and separating contacts cause no damage, while cooldown still allows physical bounces',()=>{
+ const e=boss();e.shoot();const f=contact(e),hp=e.boss.hp;f.y-=2;const pos=[f.x,f.y,f.vx,f.vy];assert.equal(e.hitBoss(f),false);assert.deepEqual([f.x,f.y,f.vx,f.vy],pos);assert.equal(e.boss.hp,hp);
+ contact(e);f.vy=-200;e.hitBoss(f);assert.equal(e.boss.hp,hp);contact(e);e.hitBoss(f);const after=e.boss.hp;contact(e);e.hitBoss(f);assert.ok(f.vy<0);assert.equal(e.boss.hp,after);assert.equal(f.bossHits,1);f.bossCooldown=0;contact(e);e.hitBoss(f);assert.equal(f.bossHits,2);
+});
+test('each fish has its own hit cooldown and child damage respects armor and corruption',()=>{
+ for(const remaining of [2,1,0]){const e=boss();e.perks={tentacle:3};e.setup();e.shoot();for(const a of e.bossAnchors.slice(remaining))a.alive=false;const factor=remaining?1-.3*remaining:1.25;const f=contact(e);e.hitBoss(f);assert.equal(e.shotImpactDamage,Math.round(e.baseValue*4*.9*factor));const child=e.makeFish(f.x,f.y,0,200,true);child.y=BOSS_BODY[0].y-BOSS_BODY[0].r-child.r+1;const hp=e.boss.hp;e.hitBoss(child);assert.equal(hp-e.boss.hp,Math.round(e.baseValue*4*.65*.9*factor));assert.equal(child.bossHits,1);}
+});
+test('impact damage never enters peg points or the later volley a second time',()=>{
+ const e=boss();e.shoot();const f=contact(e),hp=e.boss.hp;f.points=100;e.hitBoss(f);const impact=hp-e.boss.hp;assert.equal(f.points,100);land(e,100);assert.equal(e.lastVolleyDamage,120);assert.equal(e.lastImpactDamage,impact);assert.equal(e.lastShotDamage,impact+120);assert.equal(e.boss.hp,hp-impact-120);assert.equal(e.score,300);assert.equal(e.total,300);assert.deepEqual(e.events.filter(v=>v.type==='bossDamage').map(v=>v.source),['impact','volley']);
+});
+test('an impact kill clamps HP, recalls fish and settles exactly once without a counterattack',()=>{
+ const e=boss();e.perks={volley:1,rebirth:1};e.setup();e.shoot();e.pegs.forEach(p=>{if(p.kind!=='anchor')p.alive=false;});e.bumpers=[];e.rotors=[];e.altars=[];e.currents=[];e.boss.hp=1;contact(e);e.step(1/120);assert.equal(e.boss.hp,0);assert.equal(e.state,'cleared');assert.equal(e.fish.length,0);assert.equal(e.lastShotDamage,1);assert.equal(e.lastVolleyDamage,0);assert.equal(e.boss.turn,0);assert.equal(e.events.filter(v=>v.type==='bossDamage'&&v.defeated).length,1);assert.equal(e.events.filter(v=>v.type==='settle').length,1);assert.equal(e.events.some(v=>v.type==='supply'),false);const hp=e.boss.hp;e.step(1);assert.equal(e.boss.hp,hp);assert.equal(e.events.filter(v=>v.type==='settle').length,1);
+});
+test('overlapping body boundaries resolve without trapping fish or farming timeout damage',()=>{
+ const e=boss();e.shoot();for(let x=125;x<=295;x+=5)for(let y=196;y<=320;y+=5){const f=e.makeFish(x,y,0,200);e.boss.hp=100000;e.hitBoss(f,true);assert.ok([f.x,f.y,f.vx,f.vy].every(Number.isFinite));assert.ok(BOSS_BODY.every(c=>Math.hypot(f.x-c.x,f.y-c.y)>=c.r+f.r-.01),`stuck at ${x},${y}`);}assert.equal(e.shotImpactDamage,0);
+});
+test('v2.3 mid-flight saves preserve HP and shots while adding finite collision fields',()=>{
+ const e=boss(10);e.shoot();e.boss.hp-=350;e.altars=[{x:210,y:224,r:16,charges:0}];const data=e.snapshot();delete data.combatVersion;delete data.shotImpactDamage;delete data.lastImpactDamage;delete data.lastVolleyDamage;delete data.boss.hitFlash;delete data.boss.lastAttack;for(const f of data.fish){delete f.bossCooldown;delete f.bossHits;}const copy=FishEngine.restore(data);assert.equal(copy.boss.hp,e.boss.hp);assert.equal(copy.shots,e.shots);assert.deepEqual(copy.pegs,e.pegs);assert.equal(copy.fish[0].bossCooldown,0);assert.equal(copy.shotImpactDamage,0);assert.equal(copy.altars[0].x,50);contact(copy);copy.step(1/120);assert.ok(copy.boss.hp<e.boss.hp);assert.ok(Number.isFinite(copy.fish[0].bossCooldown));finish(copy);
+});
+test('settled hit flashes fade while damage history remains readable, including old saves',()=>{
+ const e=boss();e.shoot();land(e,100);assert.ok(e.boss.hitFlash>0);const history=e.boss.lastAttack;for(let n=0;n<4;n++)e.step(.1);assert.equal(e.boss.hitFlash,0);assert.equal(e.boss.lastAttack,history);const old=e.snapshot();delete old.combatVersion;delete old.lastVolleyDamage;delete old.boss.lastAttack;const copy=FishEngine.restore(old);assert.equal(copy.lastVolleyDamage,e.lastShotDamage);assert.match(copy.boss.lastAttack,/上次落缸轰击/);
 });

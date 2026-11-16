@@ -1,4 +1,6 @@
 export const W=420,H=544,FINAL_STAGE=10;
+// Shared by physics, the visible outline, and the aiming preview.
+export const BOSS_BODY=[{x:210,y:258,r:54},{x:155,y:260,r:24},{x:265,y:260,r:24}];
 export const isBossStage=stage=>stage===3||(stage>=10&&stage%5===0);
 export const difficultyFactor=stage=>.42+Math.min(9,stage-1)*.14+Math.max(0,stage-5)*.12;
 export const BIOMES=[
@@ -63,7 +65,7 @@ export function nextCorruptionTier(count){const level=Math.min(MAX_CULT_STACKS,c
 export function rng(seed){let s=seed>>>0;return()=>{s+=0x6D2B79F5;let t=Math.imul(s^s>>>15,1|s);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296;};}
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export class FishEngine{
- constructor(seed=Date.now(),{skipDraft=false}={}){this.version=2;this.balanceVersion=2;this.rulesVersion=3;this.seed=seed;this.stage=1;this.total=0;this.perks={};this.bestCombo=0;this.rerolls=3;this.draftRoll=0;this.routeId='treasure';this.events=[];this.setup();if(!skipDraft)this.state='draft';}
+ constructor(seed=Date.now(),{skipDraft=false}={}){this.version=2;this.balanceVersion=2;this.rulesVersion=3;this.combatVersion=1;this.seed=seed;this.stage=1;this.total=0;this.perks={};this.bestCombo=0;this.rerolls=3;this.draftRoll=0;this.routeId='treasure';this.events=[];this.setup();if(!skipDraft)this.state='draft';}
  get bossAnchors(){return this.pegs.filter(p=>p.kind==='anchor'&&p.alive);}
  get bossArmor(){return this.boss?this.bossAnchors.length*.3:0;}
  get bossIntent(){if(!this.boss)return '';const b=this.boss;if(!b.hp)return '守卫已击退 · 航道开启';if(!this.bossAnchors.length)return '甲壳碎裂 · 本发伤害提高 25%';if(b.sealBroken&&b.turn%3===2)return '船锚已断 · 本发中央封锁解除';if(b.turn%3!==2&&!this.bossAnchors.some(p=>p.side===b.turn%2))return '对应船锚已断 · 本发横扫解除';if(b.turn%3===2)return '沉船封锁 · 中央鱼缸倍率减半，拆掉一锚可解除';const side=b.turn%2;return (side?'右':'左')+'钳横扫 · 下半场海流向'+(side?'左':'右')+'推，拆掉'+(side?'右':'左')+'锚可解除';}
@@ -81,7 +83,7 @@ export class FishEngine{
   this.baseValue=10+tier*6+extraDepth*3;this.score=0;this.maxShots=Math.max(1,(bossRoom?4:3)+(this.perks.extra||0)-this.curse.shotLoss);this.shots=this.maxShots;
   this.fish=[];this.time=0;this.state='ready';this.shotPoints=0;this.shotGross=0;this.lastShot=0;this.lastShotGross=0;this.lastShotDeducted=0;this.events=[];this.nextFishId=0;this.draftRoll=0;
   this.pegs=[];this.bumpers=[];this.portals=[];this.rotors=[];this.currents=[];this.vents=[];this.wells=[];this.altars=[];
-  this.boss=null;this.lastShotDamage=0;this.layout=Math.floor(random()*4);this.flowSign=random()<.5?-1:1;const mirror=random()<.5?-1:1;
+  this.boss=null;this.lastShotDamage=0;this.shotImpactDamage=0;this.lastImpactDamage=0;this.lastVolleyDamage=0;this.layout=Math.floor(random()*4);this.flowSign=random()<.5?-1:1;const mirror=random()<.5?-1:1;
   if(this.stage>=2)this.bumpers=[{x:mirror===1?102:318,y:265,r:16},{x:mirror===1?312:108,y:369,r:17}];
   if(this.stage>=3)this.currents=[{x:0,y:270,w:420,h:62,ax:this.flowSign*(this.routeId==='current'?220:110)}];
   if(this.routeId==='current'&&!this.currents.length)this.currents=[{x:0,y:255,w:420,h:70,ax:this.flowSign*200}];
@@ -90,9 +92,10 @@ export class FishEngine{
   if(this.stage>=6||this.perks.dream)this.wells=[{x:210,y:312,r:60,spin:mirror}];
   if(this.stage>=7)this.portals=[{x:42,y:345,r:17,to:1},{x:377,y:145,r:17,to:0}];
   if(this.stage>=8||this.routeId==='ritual')this.altars=[{x:210,y:224,r:19,charges:0}];
+  if(bossRoom&&this.altars.length){this.altars[0].x=50;this.altars[0].y=260;}
   if(this.stage>=9)this.vents.push({x:mirror===1?342:78,y:448,r:17});
   const rows=6+tier,cols=7+Math.ceil(tier/2),desired=rows*cols+(this.routeId==='treasure'?8:0);
-  const blocked=(x,y)=>(bossRoom&&(Math.hypot(x-210,y-276)<69||[102,318].some(ax=>Math.hypot(x-ax,y-174)<30)))||[...this.bumpers,...this.vents,...this.portals,...this.altars].some(b=>Math.hypot(x-b.x,y-b.y)<b.r+12)||this.rotors.some(r=>Math.hypot(x-r.x,y-r.y)<r.r+10);
+  const blocked=(x,y)=>(bossRoom&&(Math.hypot(x-210,y-276)<69||BOSS_BODY.some(c=>Math.hypot(x-c.x,y-c.y)<c.r+12)||[102,318].some(ax=>Math.hypot(x-ax,y-174)<30)))||[...this.bumpers,...this.vents,...this.portals,...this.altars].some(b=>Math.hypot(x-b.x,y-b.y)<b.r+12)||this.rotors.some(r=>Math.hypot(x-r.x,y-r.y)<r.r+10);
   const add=(x,y)=>{if(this.pegs.length>=desired-(bossRoom?2:0)||blocked(x,y)||this.pegs.some(p=>Math.hypot(x-p.x,y-p.y)<20))return false;const roll=random(),boost=this.routeId==='treasure'?.12:0;const kind=roll<.035+tier*.025+boost*.4?'pearl':roll<.07+tier*.05+boost*.4?'bomb':roll<.20+tier*.05+boost?'gold':'normal';this.pegs.push({id:this.pegs.length,x,y,r:tier>2?7.6:8.5,kind,gold:kind==='gold',alive:true,revived:false,spectral:false});return true;};
   for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
    const x=35+col*350/(cols-1),y=128+row*307/(rows-1),dx=this.layout===0?Math.sin(row*1.5)*12:this.layout===1?(row%2?9:-9):this.layout===2?Math.sin(col+row)*9:Math.cos(row+col*.6)*12,dy=this.layout===2?Math.cos(col*1.3)*10:this.layout===3?Math.abs(col-(cols-1)/2)*4:0;
@@ -101,12 +104,12 @@ export class FishEngine{
   }
   for(let i=0;this.pegs.length<desired-(bossRoom?2:0)&&i<3500;i++)add(25+random()*370,119+random()*333);
   if(bossRoom)for(const [side,x] of [102,318].entries())this.pegs.push({id:this.pegs.length,x,y:174,r:14,kind:'anchor',side,hp:this.stage>=10?3:2,maxHp:this.stage>=10?3:2,alive:true,revived:false,spectral:false});
-  this.mapBudget=this.pegs.reduce((s,p)=>s+this.pegValue(p,false),0);this.target=Math.round(this.mapBudget*difficultyFactor(this.stage)/10)*10;this.mapCount=this.pegs.length;if(bossRoom){const hp=Math.round(this.mapBudget*(this.stage===3?1.45:6+extraDepth*.12)/10)*10;this.boss={name:this.stage===3?'沉船寄居蟹':'深渊寄居蟹',hp,maxHp:hp,turn:0,sealBroken:false,lastBlocked:0};this.target=hp;}
+  this.mapBudget=this.pegs.reduce((s,p)=>s+this.pegValue(p,false),0);this.target=Math.round(this.mapBudget*difficultyFactor(this.stage)/10)*10;this.mapCount=this.pegs.length;if(bossRoom){const hp=Math.round(this.mapBudget*(this.stage===3?1.45:6+extraDepth*.12)/10)*10;this.boss={name:this.stage===3?'沉船寄居蟹':'深渊寄居蟹',hp,maxHp:hp,turn:0,sealBroken:false,lastBlocked:0,hitFlash:0,lastAttack:'瞄准发光轮廓 · 碰撞即造成伤害'};this.target=hp;}
  }
  pegValue(p,upgraded=true){const base=this.baseValue;let value=base*(p.kind==='anchor'?4:p.kind==='pearl'?4:p.kind==='gold'?2.5:p.kind==='bomb'?1.5:1);if(upgraded){if(p.kind==='normal')value+=base*.4*(this.perks.rich||0);if((p.kind==='gold'||p.kind==='pearl')&&this.perks.gold)value*=2;}if(upgraded&&!p.spectral)value*=this.curse.originalMultiplier;if(this.routeId==='current')value*=1.25;return Math.round(value);}
  bins(){const mid=92+(this.perks.wide||0)*26-this.curse.centerShrink,other=(W-mid)/4;let x=0;return[1,2,3,2,1].map((m,i)=>{if(this.perks.maw&&i===2)m=5;if(this.perks.safe&&(i===0||i===4))m=Math.max(2,m);if(i===0||i===4)m*=this.curse.edgeMultiplier;if(i===2&&this.boss&&this.boss.turn%3===2&&this.bossAnchors.length&&!this.boss.sealBroken)m*=.5;const w=i===2?mid:other,b={x,w,m};x+=w;return b;});}
- makeFish(x,y,vx,vy,child=false){return{id:++this.nextFishId,x,y,vx,vy,r:child?6:8,points:0,hits:0,child,split:false,wallHits:0,reborn:false,echoed:false,dreamed:false,mindBroken:false,portalCooldown:0,bumperCooldown:0,ventCooldown:0,altarCooldown:0,tentacleCooldown:.3,pierces:3*(this.perks.pierce||0),trail:[]};}
- shoot(angle=0){if(this.state!=='ready'||this.shots<1||!Number.isFinite(angle))return false;angle=clamp(angle,-1.05,1.05);this.shots--;if(this.boss)this.boss.sealBroken=false;this.fish=[this.makeFish(210,52,Math.sin(angle)*360,Math.cos(angle)*360)];this.spawned=1;this.offerBubbles();if(this.perks.volley)this.spawnBrood(this.fish[0],2);this.shotPoints=0;this.shotGross=0;this.shotTime=0;this.isLast=this.shots===0;this.state='flying';this.events.push({type:'shoot'});return true;}
+ makeFish(x,y,vx,vy,child=false){return{id:++this.nextFishId,x,y,vx,vy,r:child?6:8,points:0,hits:0,child,split:false,wallHits:0,reborn:false,echoed:false,dreamed:false,mindBroken:false,portalCooldown:0,bumperCooldown:0,ventCooldown:0,altarCooldown:0,tentacleCooldown:.3,bossCooldown:0,bossHits:0,pierces:3*(this.perks.pierce||0),trail:[]};}
+ shoot(angle=0){if(this.state!=='ready'||this.shots<1||!Number.isFinite(angle))return false;angle=clamp(angle,-1.05,1.05);this.shots--;if(this.boss)this.boss.sealBroken=false;this.fish=[this.makeFish(210,52,Math.sin(angle)*360,Math.cos(angle)*360)];this.spawned=1;this.offerBubbles();if(this.perks.volley)this.spawnBrood(this.fish[0],2);this.shotPoints=0;this.shotGross=0;this.shotImpactDamage=0;this.shotTime=0;this.isLast=this.shots===0;this.state='flying';this.events.push({type:'shoot'});return true;}
  spawnBrood(f,n){const before=this.spawned;for(let i=0;i<n&&this.spawned<7;i++){const a=(i%2?1:-1)*(.55+.18*Math.floor(i/2));this.fish.push(this.makeFish(clamp(f.x+(i%2?9:-9),10,410),f.y,Math.sin(a)*220,100+Math.abs(f.vy)*.4,true));this.spawned++;}const count=this.spawned-before;if(count){this.payCurse(f,this.curse.broodTax,'幼体供养');this.events.push({type:'brood',x:f.x,y:f.y});}return count;}
  payCurse(f,rate,label){const loss=Math.round(f.points*rate);if(loss){f.points=Math.max(0,f.points-loss);this.events.push({type:'curse',x:f.x,y:f.y-20,text:label+' −'+loss});}return loss;}
  offerBubbles(){const count=this.curse.offerings;if(!count)return;const random=rng(this.seed+this.stage*967+this.shots*2311),chosen=this.pegs.filter(p=>p.alive&&p.kind!=='anchor').map(p=>({p,n:random()})).sort((a,b)=>a.n-b.n).slice(0,count);for(const {p} of chosen){p.alive=false;p.consumed=true;this.events.push({type:'offering',x:p.x,y:p.y});}if(chosen.length)this.events.push({type:'curse',x:210,y:105,text:'深海献祭 · '+chosen.length+' 颗'});}
@@ -124,14 +127,27 @@ export class FishEngine{
   if(this.perks.stars&&f.hits%8===0)this.starRitual(f);
  }
  bounce(f,x,y,r,speed=0){const dx=f.x-x,dy=f.y-y,d=Math.hypot(dx,dy);if(d>=r+f.r)return false;const nx=d>.0001?dx/d:0,ny=d>.0001?dy/d:-1;f.x=x+nx*(r+f.r+.4);f.y=y+ny*(r+f.r+.4);const dot=f.vx*nx+f.vy*ny;if(dot<0){f.vx-=1.82*dot*nx;f.vy-=1.82*dot*ny;}f.vx+=nx*speed;f.vy+=ny*speed;return true;}
+ damageBoss(raw,source,x=210,y=498){
+  const b=this.boss;if(!b||b.hp<=0||!Number.isFinite(raw)||raw<=0)return 0;
+  const factor=this.bossAnchors.length?1-this.bossArmor:1.25,damage=Math.min(b.hp,Math.max(1,Math.round(raw*factor)));
+  b.hp-=damage;b.hitFlash=.22;b.lastBlocked=Math.max(0,Math.round(raw)-damage);b.lastAttack=(source==='impact'?'实体命中':'落缸轰击')+' −'+damage+' HP'+(b.hp===0?' · 击败！':'');
+  this.events.push({type:'bossDamage',source,x,y,tx:210,ty:268,value:damage,defeated:b.hp===0});return damage;
+ }
+ hitBoss(f,draining=false){
+  if(!this.boss||!this.boss.hp)return false;let contact=false,approaching=false,px=f.x,py=f.y;
+  for(let pass=0;pass<4;pass++){let overlap=false;for(const c of BOSS_BODY){const dx=f.x-c.x,dy=f.y-c.y,d=Math.hypot(dx,dy);if(d>=c.r+f.r)continue;approaching=approaching||d<.001||f.vx*dx+f.vy*dy<0;const nx=d>.001?dx/d:0,ny=d>.001?dy/d:-1;px=c.x+nx*c.r;py=c.y+ny*c.r;this.bounce(f,c.x,c.y,c.r,draining||contact?0:45);contact=true;overlap=true;}if(!overlap)break;}
+  if(contact&&draining)f.vx=(f.x<210?-1:1)*200;
+  if(contact&&approaching&&!draining&&!f.bossCooldown){f.bossCooldown=.45;f.bossHits++;const raw=this.baseValue*4*(f.child?.65:1)*(1+.65*(this.perks.sacrifice||0))*(this.isLast&&this.perks.last?1.5:1)*this.curse.multiplier;this.shotImpactDamage+=this.damageBoss(raw,'impact',px,py);}
+  return contact;
+ }
  machineBonus(f,mult=0){const bonus=this.baseValue*(mult+2*(this.perks.spring||0));f.points+=bonus;return bonus;}
  dream(f){if(this.perks.dream&&!f.child&&!f.dreamed){f.dreamed=true;this.spawnBrood(f,2);}}
- step(dt){if(this.state!=='flying'||!Number.isFinite(dt)||dt<=0)return;dt=Math.min(dt,.1);const n=Math.ceil(dt/(1/120));for(let i=0;i<n;i++)this.tick(dt/n);}
- tick(dt){if(this.state!=='flying')return;this.time+=dt;this.shotTime+=dt;const dead=new Set(),draining=this.shotTime>13;
+ step(dt){if(!Number.isFinite(dt)||dt<=0)return;dt=Math.min(dt,.1);if(this.state!=='flying'){if(this.boss)this.boss.hitFlash=Math.max(0,(this.boss.hitFlash||0)-dt);return;}const n=Math.ceil(dt/(1/120));for(let i=0;i<n;i++)this.tick(dt/n);}
+ tick(dt){if(this.state!=='flying')return;this.time+=dt;this.shotTime+=dt;const dead=new Set(),draining=this.shotTime>13;if(this.boss)this.boss.hitFlash=Math.max(0,(this.boss.hitFlash||0)-dt);
   for(const f of [...this.fish]){
-   for(const k of ['portalCooldown','bumperCooldown','ventCooldown','altarCooldown','tentacleCooldown'])f[k]=Math.max(0,f[k]-dt);
+   for(const k of ['portalCooldown','bumperCooldown','ventCooldown','altarCooldown','tentacleCooldown','bossCooldown'])f[k]=Math.max(0,f[k]-dt);
    f.vy+=300*dt;
-   if(!draining){if(this.boss&&this.boss.turn%3!==2&&f.y>320&&f.y<405&&this.bossAnchors.some(p=>p.side===this.boss.turn%2))f.vx+=(this.boss.turn%2?-250:250)*dt;for(const z of this.currents)if(f.y>z.y&&f.y<z.y+z.h)f.vx+=z.ax*dt;
+   if(!draining){if(this.boss?.hp>0&&this.boss.turn%3!==2&&f.y>320&&f.y<405&&this.bossAnchors.some(p=>p.side===this.boss.turn%2))f.vx+=(this.boss.turn%2?-250:250)*dt;for(const z of this.currents)if(f.y>z.y&&f.y<z.y+z.h)f.vx+=z.ax*dt;
     for(const well of this.wells){const dx=well.x-f.x,dy=well.y-f.y,d=Math.hypot(dx,dy);if(d<well.r&&d>4){const force=220*(1-d/well.r);f.vx+=(dx/d*force-dy/d*140*well.spin)*dt;f.vy+=(dy/d*force+dx/d*140*well.spin)*dt;this.enterDream(f);}}
     if(this.perks.magnet&&f.y>421)f.vx+=(210-f.x)*this.perks.magnet*3*dt;
    }
@@ -147,13 +163,14 @@ export class FishEngine{
     for(const p of this.portals)if(!f.portalCooldown&&Math.hypot(f.x-p.x,f.y-p.y)<p.r){const out=this.portals[p.to];f.x=out.x+(out.x>210?-28:28);f.y=out.y+10;f.vx=(out.x>210?-1:1)*Math.max(140,Math.abs(f.vx));f.vy=Math.max(70,f.vy*.6);f.portalCooldown=1.3;this.events.push({type:'portal',x:p.x,y:p.y,tx:f.x,ty:f.y});this.enterDream(f);break;}
     for(const a of this.altars)if(this.bounce(f,a.x,a.y,a.r,95)&&!f.altarCooldown){f.altarCooldown=.7;a.charges++;f.points+=this.baseValue*3;this.strike(f,3,'gaze');this.events.push({type:'ritual',x:a.x,y:a.y});}
    }
+   this.hitBoss(f,draining);
    const speed=Math.hypot(f.vx,f.vy);if(speed>650){f.vx*=650/speed;f.vy*=650/speed;}
    if(draining)f.vy=Math.max(250,f.vy);
-   if(f.y>=503&&!f.child&&!draining){const echo=this.routeId==='echo'&&!f.echoed,rebirth=this.perks.rebirth&&!f.reborn;if(echo||rebirth){this.payCurse(f,this.curse.rebounceTax,'返生血税');if(echo)f.echoed=true;else f.reborn=true;f.y=476;f.vy=-440;f.vx=(210-f.x)*1.1;this.events.push({type:'rebirth',x:f.x,y:490});continue;}}
-   if(f.y>=503||this.shotTime>17){const bin=this.bins().find(b=>f.x>=b.x&&f.x<=b.x+b.w)||this.bins()[2],multiplier=(1+.65*(this.perks.sacrifice||0))*(this.isLast&&this.perks.last?1.5:1),gross=Math.round(Math.max(this.baseValue,f.points)*bin.m*multiplier),before=this.shotPoints;this.shotGross+=gross;this.shotPoints=Math.round(this.shotGross*this.curse.multiplier);this.events.push({type:'land',x:f.x,y:498,value:this.shotPoints-before,gross,m:bin.m});dead.add(f.id);}
+   if(f.y>=503&&!f.child&&!draining&&(!this.boss||this.boss.hp>0)){const echo=this.routeId==='echo'&&!f.echoed,rebirth=this.perks.rebirth&&!f.reborn;if(echo||rebirth){this.payCurse(f,this.curse.rebounceTax,'返生血税');if(echo)f.echoed=true;else f.reborn=true;f.y=476;f.vy=-440;f.vx=(210-f.x)*1.1;this.events.push({type:'rebirth',x:f.x,y:490});continue;}}
+   if(f.y>=503||this.shotTime>17||(this.boss&&this.boss.hp===0)){const bin=this.bins().find(b=>f.x>=b.x&&f.x<=b.x+b.w)||this.bins()[2],multiplier=(1+.65*(this.perks.sacrifice||0))*(this.isLast&&this.perks.last?1.5:1),gross=Math.round(Math.max(this.baseValue,f.points)*bin.m*multiplier),before=this.shotPoints;this.shotGross+=gross;this.shotPoints=Math.round(this.shotGross*this.curse.multiplier);this.events.push({type:'land',x:f.x,y:498,value:this.shotPoints-before,gross,m:bin.m});dead.add(f.id);}
   }
   this.fish=this.fish.filter(f=>!dead.has(f.id));
-  if(!this.fish.length){this.score+=this.shotPoints;this.total+=this.shotPoints;this.lastShot=this.shotPoints;this.lastShotGross=this.shotGross;this.lastShotDeducted=this.shotGross-this.shotPoints;if(this.lastShotDeducted)this.events.push({type:'curse',x:210,y:452,text:'侵蚀 '+this.cultCount+' 层 · −'+this.lastShotDeducted});if(this.boss){const factor=this.bossAnchors.length?1-this.bossArmor:1.25;this.lastShotDamage=Math.round(this.shotPoints*factor);this.boss.lastBlocked=Math.max(0,this.shotPoints-this.lastShotDamage);this.boss.hp=Math.max(0,this.boss.hp-this.lastShotDamage);this.events.push({type:'bossDamage',x:210,y:260,value:this.lastShotDamage,defeated:this.boss.hp===0});}this.state=(this.boss?this.boss.hp===0:this.score>=this.target)?'cleared':this.shots===0?'over':'ready';if(this.state==='ready'){this.regrow();if(this.boss){this.boss.turn++;this.boss.sealBroken=false;this.bossSupply();}}this.events.push({type:'settle',points:this.shotPoints,damage:this.lastShotDamage,state:this.state});}
+  if(!this.fish.length){this.score+=this.shotPoints;this.total+=this.shotPoints;this.lastShot=this.shotPoints;this.lastShotGross=this.shotGross;this.lastShotDeducted=this.shotGross-this.shotPoints;if(this.lastShotDeducted)this.events.push({type:'curse',x:210,y:452,text:'侵蚀 '+this.cultCount+' 层 · −'+this.lastShotDeducted});if(this.boss){this.lastImpactDamage=this.shotImpactDamage;this.lastVolleyDamage=this.damageBoss(this.shotPoints,'volley');this.lastShotDamage=this.lastImpactDamage+this.lastVolleyDamage;}this.state=(this.boss?this.boss.hp===0:this.score>=this.target)?'cleared':this.shots===0?'over':'ready';if(this.state==='ready'){this.regrow();if(this.boss){this.boss.turn++;this.boss.sealBroken=false;this.bossSupply();}}this.events.push({type:'settle',points:this.shotPoints,damage:this.lastShotDamage,state:this.state});}
  }
  bossSupply(){const random=rng(this.seed+this.stage*313+this.boss.turn*571),dead=this.pegs.filter(p=>!p.alive&&!p.consumed&&p.kind!=='anchor'),chosen=dead.map(p=>({p,n:random()})).sort((a,b)=>a.n-b.n).slice(0,Math.ceil(this.mapCount*.22));for(const {p} of chosen)p.alive=true;if(chosen.length)this.events.push({type:'supply',x:210,y:350,count:chosen.length});}
  regrow(){const rate=(this.routeId==='bloom'?.2:0)+.25*(this.perks.blackTide||0);if(!rate)return;const dead=this.pegs.filter(p=>!p.alive&&!p.revived&&!p.consumed&&p.kind!=='anchor'),random=rng(this.seed+this.stage*91+this.shots*881),chosen=dead.map(p=>({p,n:random()})).sort((a,b)=>a.n-b.n).slice(0,Math.ceil(dead.length*Math.min(.8,rate)));for(const {p} of chosen){p.alive=true;p.revived=true;p.spectral=!!this.perks.blackTide;}if(chosen.length)this.events.push({type:'regrow',count:chosen.length,x:210,y:350});}
@@ -170,6 +187,9 @@ export class FishEngine{
   Object.assign(e,data);e.events=[];
   if(data.balanceVersion!==2){const spent=Math.max(0,(data.maxShots||3)-data.shots);e.maxShots=Math.max(1,3+(e.perks.extra||0)-e.curse.shotLoss);e.shots=Math.max(0,e.maxShots-spent);if(e.state==='over'&&e.shots>0)e.state='ready';if(e.state==='ready'&&!e.shots)e.state=e.score>=e.target?'cleared':'over';if(data.balanceVersion==null)for(const f of e.fish)if(e.routeId==='echo'&&f.reborn){f.echoed=true;f.reborn=false;}e.balanceVersion=2;e.shotGross=e.state==='flying'?data.shotPoints:0;if(e.state==='flying')e.shotPoints=Math.round(e.shotGross*e.curse.multiplier);e.lastShotGross=0;e.lastShotDeducted=0;delete e.shotCost;delete e.shotOfferings;}
   if(data.rulesVersion!==3){e.rulesVersion=3;e.boss=null;e.lastShotDamage=0;}
-  return e;
+  e.shotImpactDamage=data.shotImpactDamage||0;e.lastImpactDamage=data.lastImpactDamage||0;e.lastVolleyDamage=data.lastVolleyDamage??(data.combatVersion!==1?data.lastShotDamage:0)??0;
+  for(const f of e.fish){f.bossCooldown=f.bossCooldown||0;f.bossHits=f.bossHits||0;}
+  if(e.boss){e.boss.hitFlash=e.boss.hitFlash||0;e.boss.lastAttack=e.boss.lastAttack||(e.boss.hp===0?'守卫已击退':e.lastVolleyDamage?'上次落缸轰击 −'+e.lastVolleyDamage+' HP':'瞄准发光轮廓 · 碰撞即造成伤害');if(data.combatVersion!==1)for(const a of e.altars)if(BOSS_BODY.some(c=>Math.hypot(a.x-c.x,a.y-c.y)<a.r+c.r)){a.x=50;a.y=260;}}
+  e.combatVersion=1;return e;
  }
 }

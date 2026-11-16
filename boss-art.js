@@ -1,7 +1,8 @@
+import {BOSS_BODY} from './engine.js?v=2.3.1';
 const TAU=Math.PI*2;
 const circle=(c,x,y,r,fill,stroke)=>{c.beginPath();c.arc(x,y,r,0,TAU);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.stroke();}};
 export function renderBoss(c,e,t){
- if(!e.boss)return;const b=e.boss,armored=e.bossAnchors.length>0,sway=Math.sin(t*1.3)*3;
+ if(!e.boss)return;const b=e.boss,armored=e.bossAnchors.length>0,sway=0;
  c.save();
  // Telegraph the next shot's sweep directly on the board.
  if(b.hp&&armored&&b.turn%3!==2&&e.bossAnchors.some(p=>p.side===b.turn%2)){
@@ -9,6 +10,8 @@ export function renderBoss(c,e,t){
   for(let i=0;i<7;i++){const x=((i*70+(right?t:-t)*24)%490+490)%490-35,y=366;c.beginPath();c.moveTo(x,y);c.lineTo(x+(right?16:-16),y);c.lineTo(x+(right?10:-10),y-5);c.stroke();}
  }
  if(b.hp&&armored&&b.turn%3===2&&!b.sealBroken){const bin=e.bins()[2];c.fillStyle='#ef846127';c.fillRect(bin.x,455,bin.w,40);c.strokeStyle='#f0ad77';c.setLineDash([4,4]);c.strokeRect(bin.x+2,457,bin.w-4,30);c.setLineDash([]);c.font='bold 10px "Microsoft YaHei"';c.textAlign='center';c.fillStyle='#ffd7a1';c.fillText('封锁 · 倍率减半',bin.x+bin.w/2,473);}
+ // The luminous outline matches the collision circles exactly.
+ c.save();c.lineWidth=2;c.shadowColor=armored?'#ffcc89':'#ff9b9d';c.shadowBlur=b.hitFlash?22:7;for(const shape of BOSS_BODY){circle(c,shape.x,shape.y,shape.r,b.hitFlash?'#ffe7c14d':'#b66c4012',b.hitFlash?'#fff6df':armored?'#eabd7c99':'#ffab9999');}c.restore();
  // The shell is a miniature shipwreck, carried by a deep-sea crab.
  c.translate(210,276+sway);if(!b.hp)c.globalAlpha=.35;
  const aura=c.createRadialGradient(0,0,15,0,0,78);aura.addColorStop(0,armored?'#ffbd6425':'#fb7e8a33');aura.addColorStop(1,'#e58e6d00');circle(c,0,0,78,aura);
@@ -30,7 +33,8 @@ export function renderBoss(c,e,t){
   if(e.bossAnchors.length===1){c.strokeStyle='#f6bb88';c.lineWidth=2;c.beginPath();c.moveTo(14,-37);c.lineTo(4,-22);c.lineTo(17,-14);c.lineTo(8,2);c.stroke();}
   c.restore();
  }else{c.save();c.shadowColor='#ff9e7d';c.shadowBlur=16;circle(c,0,3,7,'#ffd59b','#ff816d');c.restore();}
- c.textAlign='center';c.font='700 9px "Segoe UI","Microsoft YaHei"';c.fillStyle=armored?'#e9c299':'#ffd1bb';c.fillText(!b.hp?'GUARDIAN DEFEATED':armored?'击碎船锚 · 瓦解甲壳':'甲壳崩解 · 全力输出',0,59);c.restore();
+ if(b.hitFlash){c.save();c.globalCompositeOperation='screen';c.globalAlpha=Math.min(.7,b.hitFlash*3);for(const shape of BOSS_BODY)circle(c,shape.x-210,shape.y-276,shape.r,'#fff0c0');c.restore();}
+ c.textAlign='center';c.font='700 9px "Segoe UI","Microsoft YaHei"';c.fillStyle=armored?'#e9c299':'#ffd1bb';c.fillText(!b.hp?'GUARDIAN DEFEATED':armored?'可撞击 · 拆锚伤害更高':'完全破甲 · 碰撞造成重击',0,59);c.restore();
 }
 export function renderAnchors(c,e,t){
  if(!e.boss)return;c.save();
